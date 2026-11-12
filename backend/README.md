@@ -56,3 +56,22 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Frontend Authentication Integration
+
+The backend uses Laravel Sanctum cookie-based SPA authentication.
+
+Local development origins:
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8000
+
+Authentication flow:
+1. Request GET /sanctum/csrf-cookie.
+2. Send browser requests with credentials enabled.
+3. Send Accept: application/json.
+4. Include the decoded XSRF-TOKEN cookie value in the X-XSRF-TOKEN header when the browser client does not handle it automatically.
+5. Submit registration or login.
+6. Reuse the session cookie for subsequent requests.
+7. Call POST /api/v1/auth/logout to invalidate the session.
+
+Production frontend/API domains, HTTPS, CORS origins, and the session cookie domain must be finalized during deployment.
