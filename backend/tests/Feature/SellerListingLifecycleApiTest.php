@@ -360,4 +360,104 @@ class SellerListingLifecycleApiTest extends TestCase
             ], $this->statefulHeaders())->assertUnprocessable();
         }
     }
+
+    public function test_publish_already_active_returns_409(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, ['status' => Listing::STATUS_ACTIVE]);
+        $this->login($user);
+
+        $this->postJson("/api/v1/seller/listings/{$listing->id}/publish", [], $this->statefulHeaders())
+            ->assertStatus(409);
+    }
+
+    public function test_publish_already_sold_returns_409(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, ['status' => Listing::STATUS_SOLD]);
+        $this->login($user);
+
+        $this->postJson("/api/v1/seller/listings/{$listing->id}/publish", [], $this->statefulHeaders())
+            ->assertStatus(409);
+    }
+
+    public function test_lifecycle_conflict_precedes_invalid_persisted_data(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, ['status' => Listing::STATUS_ACTIVE, 'title' => '']);
+        $this->login($user);
+
+        $this->postJson("/api/v1/seller/listings/{$listing->id}/publish", [], $this->statefulHeaders())
+            ->assertStatus(409);
+    }
+
+    public function test_active_fixed_rejects_null_and_empty_municipality_via_patch(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, ['status' => Listing::STATUS_ACTIVE, 'price_type' => Listing::PRICE_TYPE_FIXED, 'price' => 100.00]);
+        $this->login($user);
+
+        foreach ([null, ''] as $value) {
+            $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+                'municipality' => $value,
+            ], $this->statefulHeaders())->assertUnprocessable();
+        }
+    }
+
+    public function test_active_free_rejects_null_and_empty_municipality_via_patch(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, ['status' => Listing::STATUS_ACTIVE, 'price_type' => Listing::PRICE_TYPE_FREE, 'price' => null]);
+        $this->login($user);
+
+        foreach ([null, ''] as $value) {
+            $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+                'municipality' => $value,
+            ], $this->statefulHeaders())->assertUnprocessable();
+        }
+    }
+
+    public function test_active_contact_rejects_null_and_empty_municipality_via_patch(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, ['status' => Listing::STATUS_ACTIVE, 'price_type' => Listing::PRICE_TYPE_CONTACT, 'price' => null]);
+        $this->login($user);
+
+        foreach ([null, ''] as $value) {
+            $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+                'municipality' => $value,
+            ], $this->statefulHeaders())->assertUnprocessable();
+        }
+    }
+
+    public function test_valid_non_empty_municipality_update_accepted(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, ['status' => Listing::STATUS_ACTIVE]);
+        $this->login($user);
+
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+            'municipality' => 'Testville',
+        ], $this->statefulHeaders())->assertOk()
+            ->assertJsonPath('data.municipality', 'Testville');
+    }
+
+    public function test_simulated_stale_state_active_listing_null_municipality_returns_422(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, ['status' => Listing::STATUS_ACTIVE, 'municipality' => 'Naga City']);
+        $this->login($user);
+
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+            'municipality' => null,
+        ], $this->statefulHeaders())->assertUnprocessable();
+    }
 }

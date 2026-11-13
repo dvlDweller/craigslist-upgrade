@@ -88,16 +88,62 @@ class SellerListingController extends Controller
         // Never allow protected fields to be changed.
         unset($data['user_id'], $data['status'], $data['published_at'], $data['currency'], $data['province']);
 
-        $listing->fill($data);
-        $listing->save();
+        $listing = DB::transaction(function () use ($request, $listing, $data): Listing {
+            $listing->refresh();
+            $fresh = $listing;
 
-        $listing->load([
-            'category:id,name,slug',
-            'user:id,name',
-            'images' => fn ($query) => $query
-                ->orderByDesc('is_primary')
-                ->orderBy('sort_order'),
-        ]);
+            // Stale-state guard: an active listing cannot clear municipality.
+            if ($fresh->status === Listing::STATUS_ACTIVE && $request->has('municipality')) {
+                $submittedMunicipality = $request->input('municipality');
+                if ($submittedMunicipality === null || $submittedMunicipality === '') {
+                    abort(422);
+                }
+            }
+
+            // Determine which permitted fields actually changed.
+            $changes = [];
+            foreach ($data as $key => $value) {
+                $current = $fresh->{$key};
+                if ($key === 'price') {
+                    $current = $current === null ? null : (string) $current;
+                    $value = ($value === null || $value === '') ? null : (string) $value;
+                }
+                if ($current != $value) {
+                    $changes[$key] = $data[$key];
+                }
+            }
+
+            if (empty($changes)) {
+                $fresh->load([
+                    'category:id,name,slug',
+                    'user:id,name',
+                    'images' => fn ($query) => $query
+                        ->orderByDesc('is_primary')
+                        ->orderBy('sort_order'),
+                ]);
+
+                return $fresh;
+            }
+
+            $updated = Listing::whereKey($fresh->id)
+                ->where('updated_at', $fresh->updated_at)
+                ->update(array_merge($changes, ['updated_at' => now()]));
+
+            if ($updated === 0) {
+                abort(409);
+            }
+
+            $fresh->refresh();
+            $fresh->load([
+                'category:id,name,slug',
+                'user:id,name',
+                'images' => fn ($query) => $query
+                    ->orderByDesc('is_primary')
+                    ->orderBy('sort_order'),
+            ]);
+
+            return $fresh;
+        });
 
         return new ListingDetailResource($listing);
     }
@@ -106,15 +152,35 @@ class SellerListingController extends Controller
     {
         $this->authorizeListing($request, 'publish', $listing);
 
-        $request->validateListing($listing);
+        $updated = DB::transaction(function () use ($listing, $request): int {
+            $listing->refresh();
 
-        $updated = DB::transaction(function () use ($listing): int {
-            return Listing::whereKey($listing->id)
+            if ($listing->status !== Listing::STATUS_DRAFT) {
+                abort(409);
+            }
+
+            $request->validateListing($listing);
+
+            $query = Listing::whereKey($listing->id)
                 ->where('status', Listing::STATUS_DRAFT)
-                ->update([
-                    'status' => Listing::STATUS_ACTIVE,
-                    'published_at' => now(),
-                ]);
+                ->where('updated_at', $listing->updated_at);
+
+            foreach (['title', 'description', 'category_id', 'price_type', 'currency', 'province'] as $field) {
+                $query->where($field, $listing->{$field});
+            }
+
+            foreach (['price', 'municipality', 'barangay'] as $field) {
+                if ($listing->{$field} === null) {
+                    $query->whereNull($field);
+                } else {
+                    $query->where($field, $listing->{$field});
+                }
+            }
+
+            return $query->update([
+                'status' => Listing::STATUS_ACTIVE,
+                'published_at' => now(),
+            ]);
         });
 
         if ($updated === 0) {
