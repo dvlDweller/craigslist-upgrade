@@ -535,4 +535,167 @@ class SellerListingApiTest extends TestCase
             'province' => 'Manila',
         ], $this->statefulHeaders())->assertUnprocessable();
     }
+
+    public function test_protected_fields_null_and_empty_rejected_on_creation(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $this->login($user);
+
+        foreach (['', null] as $value) {
+            foreach (['user_id', 'status', 'published_at', 'currency', 'province'] as $field) {
+                $payload = [
+                    'category_id' => $category->id,
+                    'title' => 'Bike',
+                    'description' => 'Desc',
+                    'price_type' => Listing::PRICE_TYPE_FREE,
+                    $field => $value,
+                ];
+                $this->postJson('/api/v1/seller/listings', $payload, $this->statefulHeaders())
+                    ->assertUnprocessable();
+            }
+        }
+    }
+
+    public function test_protected_fields_null_and_empty_rejected_on_update(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category);
+        $this->login($user);
+
+        foreach ([null, ''] as $value) {
+            foreach (['user_id', 'status', 'published_at', 'currency', 'province'] as $field) {
+                $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+                    'title' => 'Updated',
+                    $field => $value,
+                ], $this->statefulHeaders())->assertUnprocessable();
+            }
+        }
+    }
+
+    public function test_regression_price_updates(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+
+        // existing fixed + PATCH price=null -> 422
+        $listing = $this->makeListing($user, $category, ['price_type' => Listing::PRICE_TYPE_FIXED, 'price' => 100.00]);
+        $this->login($user);
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+            'price' => null,
+        ], $this->statefulHeaders())->assertUnprocessable();
+        $this->assertDatabaseHas('listings', ['id' => $listing->id, 'price' => 100.00]);
+
+        // existing fixed + PATCH price omitted -> preserve
+        $listing2 = $this->makeListing($user, $category, ['price_type' => Listing::PRICE_TYPE_FIXED, 'price' => 100.00]);
+        $this->patchJson("/api/v1/seller/listings/{$listing2->id}", [
+            'title' => 'Renamed',
+        ], $this->statefulHeaders())->assertOk();
+        $this->assertDatabaseHas('listings', ['id' => $listing2->id, 'price' => 100.00]);
+
+        // existing fixed + PATCH price=positive -> accept
+        $listing3 = $this->makeListing($user, $category, ['price_type' => Listing::PRICE_TYPE_FIXED, 'price' => 100.00]);
+        $this->patchJson("/api/v1/seller/listings/{$listing3->id}", [
+            'price' => 50,
+        ], $this->statefulHeaders())->assertOk()
+            ->assertJsonPath('data.price', '50.00');
+
+        // existing free + PATCH price=positive -> 422
+        $freeListing = $this->makeListing($user, $category, ['price_type' => Listing::PRICE_TYPE_FREE, 'price' => null]);
+        $this->patchJson("/api/v1/seller/listings/{$freeListing->id}", [
+            'price' => 10,
+        ], $this->statefulHeaders())->assertUnprocessable();
+        $this->assertDatabaseHas('listings', ['id' => $freeListing->id, 'price' => null]);
+
+        // existing contact + PATCH price=positive -> 422
+        $contactListing = $this->makeListing($user, $category, ['price_type' => Listing::PRICE_TYPE_CONTACT, 'price' => null]);
+        $this->patchJson("/api/v1/seller/listings/{$contactListing->id}", [
+            'price' => 10,
+        ], $this->statefulHeaders())->assertUnprocessable();
+
+        // existing free/contact + PATCH price=null -> accept
+        $this->patchJson("/api/v1/seller/listings/{$freeListing->id}", [
+            'price' => null,
+        ], $this->statefulHeaders())->assertOk();
+        $this->patchJson("/api/v1/seller/listings/{$contactListing->id}", [
+            'price' => null,
+        ], $this->statefulHeaders())->assertOk();
+
+        // existing free/contact + PATCH price omitted -> preserve null
+        $this->patchJson("/api/v1/seller/listings/{$freeListing->id}", [
+            'title' => 'Free renamed',
+        ], $this->statefulHeaders())->assertOk()
+            ->assertJsonPath('data.price', null);
+
+        // switch to free/contact clears price
+        $fixedListing = $this->makeListing($user, $category, ['price_type' => Listing::PRICE_TYPE_FIXED, 'price' => 100.00]);
+        $this->patchJson("/api/v1/seller/listings/{$fixedListing->id}", [
+            'price_type' => Listing::PRICE_TYPE_FREE,
+        ], $this->statefulHeaders())->assertOk()
+            ->assertJsonPath('data.price', null);
+        $this->patchJson("/api/v1/seller/listings/{$fixedListing->id}", [
+            'price_type' => Listing::PRICE_TYPE_CONTACT,
+        ], $this->statefulHeaders())->assertOk()
+            ->assertJsonPath('data.price', null);
+
+        // switch to fixed requires new positive price
+        $freeListing2 = $this->makeListing($user, $category, ['price_type' => Listing::PRICE_TYPE_FREE, 'price' => null]);
+        $this->patchJson("/api/v1/seller/listings/{$freeListing2->id}", [
+            'price_type' => Listing::PRICE_TYPE_FIXED,
+        ], $this->statefulHeaders())->assertUnprocessable();
+
+        // switch to fixed with valid price succeeds
+        $this->patchJson("/api/v1/seller/listings/{$freeListing2->id}", [
+            'price_type' => Listing::PRICE_TYPE_FIXED,
+            'price' => 25,
+        ], $this->statefulHeaders())->assertOk()
+            ->assertJsonPath('data.price', '25.00');
+
+        // price above 99999999.99 rejected on create
+        $this->postJson('/api/v1/seller/listings', [
+            'category_id' => $category->id,
+            'title' => 'Big price',
+            'description' => 'Desc',
+            'price_type' => Listing::PRICE_TYPE_FIXED,
+            'price' => 100000000.00,
+        ], $this->statefulHeaders())->assertUnprocessable();
+
+        // price above 99999999.99 rejected on update
+        $this->patchJson("/api/v1/seller/listings/{$listing3->id}", [
+            'price' => 100000000.00,
+        ], $this->statefulHeaders())->assertUnprocessable();
+
+        // more than 2 decimals rejected on create
+        $this->postJson('/api/v1/seller/listings', [
+            'category_id' => $category->id,
+            'title' => 'Decimals',
+            'description' => 'Desc',
+            'price_type' => Listing::PRICE_TYPE_FIXED,
+            'price' => 10.999,
+        ], $this->statefulHeaders())->assertUnprocessable();
+
+        // more than 2 decimals rejected on update
+        $this->patchJson("/api/v1/seller/listings/{$listing3->id}", [
+            'price' => 10.999,
+        ], $this->statefulHeaders())->assertUnprocessable();
+    }
+
+    public function test_regression_fixed_price_type_submitted_without_price_preserves_price(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, [
+            'price_type' => Listing::PRICE_TYPE_FIXED,
+            'price' => 100.00,
+        ]);
+        $this->login($user);
+
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+            'price_type' => Listing::PRICE_TYPE_FIXED,
+        ], $this->statefulHeaders())->assertOk()
+            ->assertJsonPath('data.price', '100.00');
+
+        $this->assertDatabaseHas('listings', ['id' => $listing->id, 'price' => 100.00]);
+    }
 }

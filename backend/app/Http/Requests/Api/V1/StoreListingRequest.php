@@ -27,17 +27,19 @@ class StoreListingRequest extends FormRequest
             'price' => [
                 'nullable',
                 'numeric',
+                'max:99999999.99',
+                'decimal:0,2',
                 'gt:0',
                 Rule::requiredIf(fn () => $this->input('price_type') === Listing::PRICE_TYPE_FIXED),
                 Rule::prohibitedIf(fn () => in_array($this->input('price_type'), [Listing::PRICE_TYPE_FREE, Listing::PRICE_TYPE_CONTACT], true) && $this->filled('price')),
             ],
             'municipality' => ['nullable', 'string', 'max:100'],
             'barangay' => ['nullable', 'string', 'max:100'],
-            'user_id' => ['prohibited'],
-            'status' => ['prohibited'],
-            'published_at' => ['prohibited'],
-            'currency' => ['prohibited'],
-            'province' => ['prohibited'],
+            'user_id' => ['missing'],
+            'status' => ['missing'],
+            'published_at' => ['missing'],
+            'currency' => ['missing'],
+            'province' => ['missing'],
         ];
     }
 }
