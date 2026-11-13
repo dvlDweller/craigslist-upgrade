@@ -21,4 +21,14 @@ class ListingPolicy
     {
         return $user->id === $listing->user_id;
     }
+
+    public function publish(User $user, Listing $listing): bool
+    {
+        return $user->id === $listing->user_id;
+    }
+
+    public function markSold(User $user, Listing $listing): bool
+    {
+        return $user->id === $listing->user_id;
+    }
 }

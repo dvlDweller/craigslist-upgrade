@@ -30,6 +30,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function (): void {
     Route::get('/seller/listings/{listing}', [SellerListingController::class, 'show']);
     Route::patch('/seller/listings/{listing}', [SellerListingController::class, 'update']);
     Route::delete('/seller/listings/{listing}', [SellerListingController::class, 'destroy']);
+    Route::post('/seller/listings/{listing}/publish', [SellerListingController::class, 'publish']);
+    Route::post('/seller/listings/{listing}/mark-sold', [SellerListingController::class, 'markSold']);
 });
 
 Route::get('/user', function (Request $request) {

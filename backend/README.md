@@ -87,3 +87,12 @@ Authenticated seller endpoints (require `auth:sanctum` cookie session):
 - `DELETE /api/v1/seller/listings/{listing}` — soft-delete an owned listing (204).
 
 Protected fields (`user_id`, `status`, `published_at`, `currency`, `province`) cannot be changed by clients.
+
+## Listing Lifecycle API
+
+Authenticated seller endpoints (require `auth:sanctum` cookie session):
+
+- `POST /api/v1/seller/listings/{listing}/publish` — validate and publish a draft listing (status becomes `active`, `published_at` set).
+- `POST /api/v1/seller/listings/{listing}/mark-sold` — mark an active listing as sold.
+
+Both endpoints return `409 Conflict` when the listing is not in the required source status.

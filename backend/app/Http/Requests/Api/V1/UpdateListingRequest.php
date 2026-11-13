@@ -90,6 +90,14 @@ class UpdateListingRequest extends FormRequest
                     // if omitted preserve existing
                 }
             }
+
+            // Active listings cannot clear municipality.
+            if ($listing instanceof Listing && $listing->status === Listing::STATUS_ACTIVE && $this->has('municipality')) {
+                $submittedMunicipality = $this->input('municipality');
+                if ($submittedMunicipality === null || $submittedMunicipality === '') {
+                    $validator->errors()->add('municipality', 'The municipality field cannot be empty for active listings.');
+                }
+            }
         });
     }
 }
