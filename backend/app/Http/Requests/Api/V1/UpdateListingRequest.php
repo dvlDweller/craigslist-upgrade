@@ -52,6 +52,15 @@ class UpdateListingRequest extends FormRequest
     {
         $validator->after(function (Validator $validator): void {
             $listing = $this->route('listing');
+
+            // Active listings cannot clear municipality (applies to all price types).
+            if ($listing instanceof Listing && $listing->status === Listing::STATUS_ACTIVE && $this->has('municipality')) {
+                $submittedMunicipality = $this->input('municipality');
+                if ($submittedMunicipality === null || $submittedMunicipality === '') {
+                    $validator->errors()->add('municipality', 'The municipality field cannot be empty for active listings.');
+                }
+            }
+
             $priceTypeSubmitted = $this->has('price_type');
             $priceSubmitted = $this->has('price');
 
@@ -90,6 +99,7 @@ class UpdateListingRequest extends FormRequest
                     // if omitted preserve existing
                 }
             }
+
         });
     }
 }
