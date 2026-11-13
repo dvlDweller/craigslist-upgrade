@@ -89,6 +89,8 @@ class SellerListingController extends Controller
         unset($data['user_id'], $data['status'], $data['published_at'], $data['currency'], $data['province']);
 
         $listing = DB::transaction(function () use ($request, $listing, $data): Listing {
+            $originalStatus = $listing->status;
+
             $listing->refresh();
             $fresh = $listing;
 
@@ -127,6 +129,7 @@ class SellerListingController extends Controller
 
             $updated = Listing::whereKey($fresh->id)
                 ->where('updated_at', $fresh->updated_at)
+                ->where('status', $originalStatus)
                 ->update(array_merge($changes, ['updated_at' => now()]));
 
             if ($updated === 0) {

@@ -460,4 +460,29 @@ class SellerListingLifecycleApiTest extends TestCase
             'municipality' => null,
         ], $this->statefulHeaders())->assertUnprocessable();
     }
+
+    public function test_stale_lifecycle_state_returns_409(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        // Start from a draft listing.
+        $listing = $this->makeListing($user, $category, ['status' => Listing::STATUS_DRAFT]);
+        $this->login($user);
+
+        // This simulates a stale lifecycle state and is NOT a true simultaneous-request test.
+        // A one-time retrieved observer flips the persisted row to active on the second
+        // retrieval (the refresh inside the controller transaction), so the controller's
+        // originally captured draft status no longer matches persisted state.
+        $retrievals = 0;
+        Listing::retrieved(function (Listing $retrieved) use (&$retrievals, $listing): void {
+            $retrievals++;
+            if ($retrievals === 2 && $retrieved->getKey() === $listing->id) {
+                Listing::whereKey($listing->id)->update(['status' => Listing::STATUS_ACTIVE]);
+            }
+        });
+
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+            'municipality' => 'Testville',
+        ], $this->statefulHeaders())->assertStatus(409);
+    }
 }
