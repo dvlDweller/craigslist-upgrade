@@ -110,6 +110,33 @@ class SellerListingImageApiTest extends TestCase
         $this->patchJson("/api/v1/seller/listings/{$listing->id}/images/reorder", ['image_ids' => [$image->id, $image2->id]], $this->statefulHeaders())->assertNotFound();
     }
 
+    public function test_non_owner_upload_with_invalid_payload_returns_404(): void
+    {
+        $owner = $this->createUser('owner@example.com');
+        $other = $this->createUser('other@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($owner, $category);
+        $this->login($other);
+
+        $this->postJson("/api/v1/seller/listings/{$listing->id}/images", [
+            'images' => [],
+        ], $this->statefulHeaders())->assertNotFound();
+    }
+
+    public function test_non_owner_reorder_with_invalid_payload_returns_404(): void
+    {
+        $owner = $this->createUser('owner@example.com');
+        $other = $this->createUser('other@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($owner, $category);
+        $img = $listing->images()->create(['path' => 'listings/x.jpg']);
+        $this->login($other);
+
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}/images/reorder", [
+            'image_ids' => [$img->id, $img->id],
+        ], $this->statefulHeaders())->assertNotFound();
+    }
+
     public function test_soft_deleted_listing_returns_404(): void
     {
         $user = $this->createUser('seller@example.com');
@@ -554,9 +581,11 @@ class SellerListingImageApiTest extends TestCase
         // second storage operation throws
         $diskMock->shouldReceive('putFileAs')->once()->andThrow(new \RuntimeException('storage failure'));
         // cleanup of the first file is invoked
-        $diskMock->shouldReceive('delete')->with($firstPath)->once()->andReturn(true);
+        $diskMock->shouldReceive('delete')->with($firstPath)->once()->andReturn(false);
 
         Storage::shouldReceive('disk')->with('public')->andReturn($diskMock);
+
+        \Illuminate\Support\Facades\Log::spy();
 
         $response = $this->post("/api/v1/seller/listings/{$listing->id}/images", [
             'images' => [$file1, $file2],
@@ -564,6 +593,7 @@ class SellerListingImageApiTest extends TestCase
 
         $this->assertGreaterThanOrEqual(500, $response->getStatusCode());
         $this->assertSame(0, $listing->images()->count());
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('warning')->once();
     }
 
     public function test_database_failure_after_storage_cleanup(): void

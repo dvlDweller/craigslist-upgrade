@@ -2,11 +2,21 @@
 namespace App\Http\Requests\Api\V1;
 use App\Models\Listing;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Validator;
 
 class ReorderListingImagesRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        $listing = $this->route('listing');
+
+        if (! $listing instanceof Listing || ! Gate::forUser($this->user())->allows('manageImages', $listing)) {
+            abort(404);
+        }
+
+        return true;
+    }
     public function rules(): array
     {
         return [

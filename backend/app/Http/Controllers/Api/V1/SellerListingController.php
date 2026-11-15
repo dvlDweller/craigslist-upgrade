@@ -279,7 +279,13 @@ class SellerListingController extends Controller
         } catch (\Throwable $exception) {
             foreach ($storedPaths as $path) {
                 try {
-                    Storage::disk('public')->delete($path);
+                    $deleted = Storage::disk('public')->delete($path);
+                    if (! $deleted) {
+                        Log::warning('Listing image cleanup failed after upload error.', [
+                            'listing_id' => $listing->id,
+                            'path' => $path,
+                        ]);
+                    }
                 } catch (\Throwable $cleanupException) {
                     Log::warning('Listing image cleanup failed after upload error.', [
                         'listing_id' => $listing->id,
