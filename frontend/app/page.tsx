@@ -1,5 +1,5 @@
 
-import Button from "@/components/ui/button";
+import Link from "next/link";
 import MainContainer from "@/components/layout/main-container";
 
 export default function Home() {
@@ -22,13 +22,16 @@ export default function Home() {
         </p>
 
         <div className="mt-10">
-          <Button disabled>
-            Marketplace Coming Soon
-          </Button>
+          <Link
+            href="/listings"
+            className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-700"
+          >
+            Browse Listings
+          </Link>
         </div>
 
         <p className="mt-4 text-sm text-gray-400">
-         We are building something better for your local community.
+          Discover something new in your local community.
         </p>
       </section>
     </MainContainer>

@@ -6,51 +6,34 @@ export default function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        {/* Logo */}
         <Logo />
 
-        {/* Navigation */}
         <nav className="hidden items-center gap-8 text-sm font-medium text-gray-600 md:flex">
           <Link href="/" className="transition hover:text-orange-600">
             Home
           </Link>
 
-          <span
-            title="Listing browsing coming in a later phase"
-            className="cursor-not-allowed text-gray-400"
+          <Link
+            href="/listings"
+            className="transition hover:text-orange-600"
           >
             Browse Listings
-          </span>
+          </Link>
         </nav>
 
-        {/* Account Actions */}
         <div className="flex items-center gap-3">
-          {/*
-            Sign In and Register are placeholders for now.
-            Functional authentication navigation will be added
-            in a later phase.
-          */}
-          <span
-            title="Authentication coming in a later phase"
-            aria-label="Sign In - coming in a later phase"
-            className="hidden text-sm font-medium text-gray-600 sm:inline"
-          >
+          <span className="cursor-not-allowed text-sm font-medium text-gray-400">
             Sign In
           </span>
 
-          <span
-            title="Authentication coming in a later phase"
-            aria-label="Register - coming in a later phase"
-            className="hidden text-sm font-medium text-gray-600 sm:inline"
-          >
+          <span className="cursor-not-allowed text-sm font-medium text-gray-400">
             Register
           </span>
 
           <button
             type="button"
             disabled
-            title="Coming soon"
-            className="cursor-not-allowed rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white opacity-60"
+            className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white opacity-50"
           >
             Sell Listing
           </button>
