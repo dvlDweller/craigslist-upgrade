@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ListListingsRequest;
 use App\Http\Resources\ListingDetailResource;
 use App\Http\Resources\ListingResource;
+use App\Models\Category;
 use App\Models\Listing;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -32,9 +33,34 @@ class ListingController extends Controller
         $priceType = $request->validated('price_type');
 
         if ($category !== null) {
-            $query->whereHas('category', function ($query) use ($category): void {
-                $query->where('slug', $category);
-            });
+            $selected = Category::where('slug', $category)
+                ->where('is_active', true)
+                ->first();
+
+            $isRoot = $selected !== null && $selected->parent_id === null;
+            $isDirectChildOfActiveRoot = false;
+
+            if ($selected !== null && $selected->parent_id !== null) {
+                $parent = $selected->parent;
+                $isDirectChildOfActiveRoot = $parent !== null
+                    && $parent->is_active
+                    && $parent->parent_id === null;
+            }
+
+            if ($selected === null || (! $isRoot && ! $isDirectChildOfActiveRoot)) {
+                $query->whereRaw('1 = 0');
+            } elseif ($isRoot) {
+                $rootId = $selected->id;
+                $query->whereHas('category', function ($query) use ($rootId): void {
+                    $query->where('id', $rootId)
+                        ->orWhere(function ($query) use ($rootId): void {
+                            $query->where('parent_id', $rootId)
+                                ->where('is_active', true);
+                        });
+                });
+            } else {
+                $query->where('category_id', $selected->id);
+            }
         }
 
         if ($search !== null) {
