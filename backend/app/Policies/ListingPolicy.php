@@ -31,4 +31,9 @@ class ListingPolicy
     {
         return $user->id === $listing->user_id;
     }
+
+    public function manageImages(User $user, Listing $listing): bool
+    {
+        return $user->id === $listing->user_id;
+    }
 }

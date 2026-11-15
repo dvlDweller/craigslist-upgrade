@@ -32,6 +32,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function (): void {
     Route::delete('/seller/listings/{listing}', [SellerListingController::class, 'destroy']);
     Route::post('/seller/listings/{listing}/publish', [SellerListingController::class, 'publish']);
     Route::post('/seller/listings/{listing}/mark-sold', [SellerListingController::class, 'markSold']);
+    Route::post('/seller/listings/{listing}/images', [SellerListingController::class, 'storeImages']);
+    Route::delete('/seller/listings/{listing}/images/{image}', [SellerListingController::class, 'destroyImage']);
+    Route::post('/seller/listings/{listing}/images/{image}/primary', [SellerListingController::class, 'setPrimaryImage']);
+    Route::patch('/seller/listings/{listing}/images/reorder', [SellerListingController::class, 'reorderImages']);
 });
 
 Route::get('/user', function (Request $request) {
