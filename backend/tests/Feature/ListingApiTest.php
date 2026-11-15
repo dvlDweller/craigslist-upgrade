@@ -457,7 +457,7 @@ class ListingApiTest extends TestCase
         $this->createListing(['category' => $child, 'title' => 'Wrong City', 'municipality' => 'Pili', 'price' => 100]);
         $this->createListing(['category' => $parent, 'title' => 'Wrong Price', 'municipality' => 'Naga City', 'price' => 500]);
 
-        $response = $this->getJson('/api/v1/listings?category=vehicles&municipality[]=Naga+City&min_price=50&max_price=200');
+        $response = $this->getJson('/api/v1/listings?category=vehicles&municipality[]=Naga+City&min_price=50&max_price=200&q=Match');
 
         $response->assertOk()->assertJsonCount(1, 'data');
         $this->assertSame('Match', $response->json('data.0.title'));
