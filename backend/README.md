@@ -75,3 +75,24 @@ Authentication flow:
 7. Call POST /api/v1/auth/logout to invalidate the session.
 
 Production frontend/API domains, HTTPS, CORS origins, and the session cookie domain must be finalized during deployment.
+
+## Seller Listing Management API
+
+Authenticated seller endpoints (require `auth:sanctum` cookie session):
+
+- `GET /api/v1/seller/listings` — paginated listings owned by the authenticated user (all statuses), newest first.
+- `POST /api/v1/seller/listings` — create a draft listing owned by the authenticated user.
+- `GET /api/v1/seller/listings/{listing}` — view an owned listing (draft/active/sold).
+- `PATCH /api/v1/seller/listings/{listing}` — update permitted listing fields.
+- `DELETE /api/v1/seller/listings/{listing}` — soft-delete an owned listing (204).
+
+Protected fields (`user_id`, `status`, `published_at`, `currency`, `province`) cannot be changed by clients.
+
+## Listing Lifecycle API
+
+Authenticated seller endpoints (require `auth:sanctum` cookie session):
+
+- `POST /api/v1/seller/listings/{listing}/publish` — validate and publish a draft listing (status becomes `active`, `published_at` set).
+- `POST /api/v1/seller/listings/{listing}/mark-sold` — mark an active listing as sold.
+
+Both endpoints return `409 Conflict` when the listing is not in the required source status.
