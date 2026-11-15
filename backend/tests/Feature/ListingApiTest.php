@@ -284,7 +284,6 @@ class ListingApiTest extends TestCase
         $this->assertSame($second->id, $response->json('data.1.id'));
     }
 
-
     public function test_invalid_page_values_return_422(): void
     {
         $this->getJson('/api/v1/listings?page=0')->assertUnprocessable();
@@ -372,5 +371,159 @@ class ListingApiTest extends TestCase
         $this->assertSame($first->id, $response->json('data.0.id'));
         $this->assertSame($second->id, $response->json('data.1.id'));
     }
-}
 
+    public function test_category_hierarchy_parent_includes_active_children(): void
+    {
+        $parent = Category::create(['name' => 'Vehicles', 'slug' => 'vehicles', 'is_active' => true]);
+        $child = Category::create(['name' => 'Cars', 'slug' => 'cars', 'parent_id' => $parent->id, 'is_active' => true]);
+        $other = Category::create(['name' => 'Electronics', 'slug' => 'electronics', 'is_active' => true]);
+
+        $parentListing = $this->createListing(['category' => $parent, 'title' => 'Parent Listing']);
+        $childListing = $this->createListing(['category' => $child, 'title' => 'Child Listing']);
+        $otherListing = $this->createListing(['category' => $other, 'title' => 'Other Listing']);
+
+        $response = $this->getJson('/api/v1/listings?category=vehicles');
+
+        $response->assertOk()->assertJsonCount(2, 'data');
+        $ids = collect($response->json('data'))->pluck('id')->all();
+        $this->assertContains($parentListing->id, $ids);
+        $this->assertContains($childListing->id, $ids);
+        $this->assertNotContains($otherListing->id, $ids);
+    }
+
+    public function test_category_hierarchy_child_filter_returns_only_child(): void
+    {
+        $parent = Category::create(['name' => 'Vehicles', 'slug' => 'vehicles', 'is_active' => true]);
+        $child = Category::create(['name' => 'Cars', 'slug' => 'cars', 'parent_id' => $parent->id, 'is_active' => true]);
+
+        $parentListing = $this->createListing(['category' => $parent, 'title' => 'Parent Listing']);
+        $childListing = $this->createListing(['category' => $child, 'title' => 'Child Listing']);
+
+        $response = $this->getJson('/api/v1/listings?category=cars');
+
+        $response->assertOk()->assertJsonCount(1, 'data');
+        $this->assertSame($childListing->id, $response->json('data.0.id'));
+    }
+
+    public function test_category_hierarchy_excludes_inactive_children(): void
+    {
+        $parent = Category::create(['name' => 'Vehicles', 'slug' => 'vehicles', 'is_active' => true]);
+        $activeChild = Category::create(['name' => 'Cars', 'slug' => 'cars', 'parent_id' => $parent->id, 'is_active' => true]);
+        $inactiveChild = Category::create(['name' => 'Hidden', 'slug' => 'hidden', 'parent_id' => $parent->id, 'is_active' => false]);
+
+        $activeListing = $this->createListing(['category' => $activeChild, 'title' => 'Active Child Listing']);
+        $inactiveListing = $this->createListing(['category' => $inactiveChild, 'title' => 'Inactive Child Listing']);
+
+        $response = $this->getJson('/api/v1/listings?category=vehicles');
+
+        $response->assertOk()->assertJsonCount(1, 'data');
+        $this->assertSame($activeListing->id, $response->json('data.0.id'));
+    }
+
+    public function test_category_hierarchy_inactive_root_returns_empty(): void
+    {
+        $inactiveRoot = Category::create(['name' => 'Inactive Root', 'slug' => 'inactive-root', 'is_active' => false]);
+        $this->createListing(['category' => $inactiveRoot, 'title' => 'Inactive Root Listing']);
+
+        $response = $this->getJson('/api/v1/listings?category=inactive-root');
+
+        $response->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_category_hierarchy_deeper_category_returns_empty(): void
+    {
+        $root = Category::create(['name' => 'Vehicles', 'slug' => 'vehicles', 'is_active' => true]);
+        $child = Category::create(['name' => 'Cars', 'slug' => 'cars', 'parent_id' => $root->id, 'is_active' => true]);
+        $grandchild = Category::create(['name' => 'Sedans', 'slug' => 'sedans', 'parent_id' => $child->id, 'is_active' => true]);
+
+        $this->createListing(['category' => $grandchild, 'title' => 'Grandchild Listing']);
+
+        $response = $this->getJson('/api/v1/listings?category=sedans');
+
+        $response->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_category_filter_nonexistent_returns_422(): void
+    {
+        $this->getJson('/api/v1/listings?category=does-not-exist')->assertUnprocessable();
+    }
+
+    public function test_category_filter_combined_with_other_filters(): void
+    {
+        $parent = Category::create(['name' => 'Vehicles', 'slug' => 'vehicles', 'is_active' => true]);
+        $child = Category::create(['name' => 'Cars', 'slug' => 'cars', 'parent_id' => $parent->id, 'is_active' => true]);
+
+        $this->createListing(['category' => $child, 'title' => 'Match', 'municipality' => 'Naga City', 'price' => 100]);
+        $this->createListing(['category' => $child, 'title' => 'Wrong City', 'municipality' => 'Pili', 'price' => 100]);
+        $this->createListing(['category' => $parent, 'title' => 'Wrong Price', 'municipality' => 'Naga City', 'price' => 500]);
+
+        $response = $this->getJson('/api/v1/listings?category=vehicles&municipality[]=Naga+City&min_price=50&max_price=200&q=Match');
+
+        $response->assertOk()->assertJsonCount(1, 'data');
+        $this->assertSame('Match', $response->json('data.0.title'));
+    }
+
+    public function test_category_filter_pagination(): void
+    {
+        $parent = Category::create(['name' => 'Vehicles', 'slug' => 'vehicles', 'is_active' => true]);
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->createListing(['category' => $parent, 'title' => "Vehicle {$i}"]);
+        }
+
+        $response = $this->getJson('/api/v1/listings?category=vehicles&per_page=2');
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.per_page', 2)
+            ->assertJsonPath('meta.total', 5);
+    }
+
+    public function test_listing_resource_includes_category_summary(): void
+    {
+        $category = Category::create(['name' => 'Vehicles', 'slug' => 'vehicles', 'is_active' => true]);
+        $this->createListing(['category' => $category, 'title' => 'Summary Test']);
+
+        $response = $this->getJson('/api/v1/listings');
+
+        $response->assertOk();
+        $this->assertArrayHasKey('category', $response->json('data.0'));
+        $this->assertSame($category->id, $response->json('data.0.category.id'));
+        $this->assertSame('Vehicles', $response->json('data.0.category.name'));
+        $this->assertSame('vehicles', $response->json('data.0.category.slug'));
+    }
+
+    public function test_listing_detail_unchanged_with_category(): void
+    {
+        $category = Category::create(['name' => 'Vehicles', 'slug' => 'vehicles', 'is_active' => true]);
+        $listing = $this->createListing(['category' => $category, 'title' => 'Detail Test']);
+
+        $response = $this->getJson("/api/v1/listings/{$listing->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.category.id', $category->id)
+            ->assertJsonPath('data.category.name', 'Vehicles')
+            ->assertJsonPath('data.category.slug', 'vehicles');
+    }
+
+    public function test_listing_endpoint_public_visibility(): void
+    {
+        $response = $this->getJson('/api/v1/listings');
+
+        $response->assertOk();
+    }
+
+    public function test_inactive_parent_child_returns_empty(): void
+    {
+        $inactiveParent = Category::create(['name' => 'Inactive Parent', 'slug' => 'inactive-parent', 'is_active' => false]);
+        $activeChild = Category::create(['name' => 'Active Child', 'slug' => 'active-child', 'parent_id' => $inactiveParent->id, 'is_active' => true]);
+
+        $this->createListing(['category' => $activeChild, 'title' => 'Child Listing']);
+
+        $response = $this->getJson('/api/v1/listings?category=active-child');
+
+        $response->assertOk()
+            ->assertJsonPath('data', [])
+            ->assertJsonPath('meta.total', 0);
+    }
+}

@@ -26,6 +26,11 @@ class ListingResource extends JsonResource
                 ? Storage::disk($primaryImage->disk)->url($primaryImage->path)
                 : null,
             'created_at' => $this->created_at,
+            'category' => $this->whenLoaded('category', fn () => [
+                'id' => $this->category->id,
+                'name' => $this->category->name,
+                'slug' => $this->category->slug,
+            ]),
         ];
     }
 }

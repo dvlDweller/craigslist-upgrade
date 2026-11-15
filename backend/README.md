@@ -96,3 +96,21 @@ Authenticated seller endpoints (require `auth:sanctum` cookie session):
 - `POST /api/v1/seller/listings/{listing}/mark-sold` — mark an active listing as sold.
 
 Both endpoints return `409 Conflict` when the listing is not in the required source status.
+
+## Public Listing Category Filtering
+
+`GET /api/v1/listings` supports hierarchical category filtering via the `category` query parameter (category slug).
+
+- Selectable categories are active roots and their active direct children only.
+- Filtering by an active root returns listings in that root category plus listings in its active direct child categories.
+- Filtering by an active direct child returns listings only in that child category.
+- Inactive categories, deeper (grandchild) categories, and unselectable categories return no results.
+- A nonexistent category slug returns `422 Unprocessable Entity`.
+
+Each listing in the paginated response includes a summary `category` object:
+
+```json
+"category": { "id": 1, "name": "Vehicles", "slug": "vehicles" }
+```
+
+The listing detail endpoint (`GET /api/v1/listings/{listing}`) also includes the same `category` summary object.
