@@ -30,7 +30,8 @@ class StoreListingImageRequest extends FormRequest
             $listing = $this->route('listing');
             if (! $listing instanceof Listing) { return; }
             $existing = $listing->images()->count();
-            $uploaded = count($this->file('images', []));
+            $uploadedFiles = $this->file('images', []);
+            $uploaded = is_array($uploadedFiles) ? count($uploadedFiles) : 0;
             if ($existing + $uploaded > 8) {
                 $validator->errors()->add('images', 'A listing may not have more than 8 images.');
             }

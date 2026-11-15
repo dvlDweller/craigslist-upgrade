@@ -265,6 +265,24 @@ class SellerListingImageApiTest extends TestCase
         ], $this->statefulHeaders())->assertUnprocessable();
     }
 
+    public function test_single_file_instead_of_images_array_returns_422(): void
+    {
+        Storage::fake('public');
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category);
+        $this->login($user);
+
+        $file = UploadedFile::fake()->create('photo.jpg', 10, 'image/jpeg');
+
+        $this->post("/api/v1/seller/listings/{$listing->id}/images", [
+            'images' => $file,
+        ], $this->statefulHeaders())->assertUnprocessable();
+
+        $this->assertDatabaseCount('listing_images', 0);
+        $this->assertSame(0, count(Storage::disk('public')->allFiles('listings/' . $listing->id)));
+    }
+
     public function test_more_than_8_incoming_files_returns_422(): void
     {
         Storage::fake('public');
