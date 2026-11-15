@@ -7,24 +7,42 @@ export default function SiteHeader() {
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         {/* Logo */}
-<Logo />
+        <Logo />
+
         {/* Navigation */}
         <nav className="hidden items-center gap-8 text-sm font-medium text-gray-600 md:flex">
           <Link href="/" className="transition hover:text-orange-600">
             Home
           </Link>
-          <span className="cursor-not-allowed text-gray-400">
+
+          <span
+            title="Listing browsing coming in a later phase"
+            className="cursor-not-allowed text-gray-400"
+          >
             Browse Listings
           </span>
         </nav>
 
         {/* Account Actions */}
         <div className="flex items-center gap-3">
-          <span className="hidden text-sm font-medium text-gray-600 sm:inline">
+          {/*
+            Sign In and Register are placeholders for now.
+            Functional authentication navigation will be added
+            in a later phase.
+          */}
+          <span
+            title="Authentication coming in a later phase"
+            aria-label="Sign In - coming in a later phase"
+            className="hidden text-sm font-medium text-gray-600 sm:inline"
+          >
             Sign In
           </span>
 
-          <span className="hidden text-sm font-medium text-gray-600 sm:inline">
+          <span
+            title="Authentication coming in a later phase"
+            aria-label="Register - coming in a later phase"
+            className="hidden text-sm font-medium text-gray-600 sm:inline"
+          >
             Register
           </span>
 
