@@ -4,16 +4,22 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\PublishListingRequest;
+use App\Http\Requests\Api\V1\ReorderListingImagesRequest;
+use App\Http\Requests\Api\V1\StoreListingImageRequest;
 use App\Http\Requests\Api\V1\StoreListingRequest;
 use App\Http\Requests\Api\V1\UpdateListingRequest;
 use App\Http\Resources\ListingDetailResource;
 use App\Http\Resources\ListingResource;
 use App\Models\Listing;
+use App\Models\ListingImage;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class SellerListingController extends Controller
 {
@@ -85,7 +91,6 @@ class SellerListingController extends Controller
             }
         }
 
-        // Never allow protected fields to be changed.
         unset($data['user_id'], $data['status'], $data['published_at'], $data['currency'], $data['province']);
 
         $listing = DB::transaction(function () use ($request, $listing, $data): Listing {
@@ -94,7 +99,6 @@ class SellerListingController extends Controller
             $listing->refresh();
             $fresh = $listing;
 
-            // Stale-state guard: an active listing cannot clear municipality.
             if ($fresh->status === Listing::STATUS_ACTIVE && $request->has('municipality')) {
                 $submittedMunicipality = $request->input('municipality');
                 if ($submittedMunicipality === null || $submittedMunicipality === '') {
@@ -102,7 +106,6 @@ class SellerListingController extends Controller
                 }
             }
 
-            // Determine which permitted fields actually changed.
             $changes = [];
             foreach ($data as $key => $value) {
                 $current = $fresh->{$key};
@@ -149,6 +152,15 @@ class SellerListingController extends Controller
         });
 
         return new ListingDetailResource($listing);
+    }
+
+    public function destroy(Request $request, Listing $listing): \Illuminate\Http\Response
+    {
+        $this->authorizeListing($request, 'delete', $listing);
+
+        $listing->delete();
+
+        return response()->noContent();
     }
 
     public function publish(PublishListingRequest $request, Listing $listing): ListingDetailResource
@@ -228,13 +240,188 @@ class SellerListingController extends Controller
         return new ListingDetailResource($listing);
     }
 
-    public function destroy(Request $request, Listing $listing): \Illuminate\Http\Response
+    public function storeImages(StoreListingImageRequest $request, Listing $listing): \Illuminate\Http\JsonResponse
     {
-        $this->authorizeListing($request, 'delete', $listing);
+        $this->authorizeListing($request, 'manageImages', $listing);
 
-        $listing->delete();
+        $files = $request->file('images', []);
+        $storedPaths = [];
+
+        try {
+            foreach ($files as $file) {
+                $path = $file->store("listings/{$listing->id}", 'public');
+                if (! is_string($path) || $path === '') {
+                    throw new \RuntimeException('Unable to store image.');
+                }
+                $storedPaths[] = $path;
+            }
+
+            DB::transaction(function () use ($listing, $storedPaths): void {
+                $existingCount = $listing->images()->count();
+                if ($existingCount + count($storedPaths) > 8) {
+                    throw ValidationException::withMessages([
+                        'images' => ['A listing may not have more than 8 images.'],
+                    ]);
+                }
+
+                $hasPrimary = $listing->images()->where('is_primary', true)->exists();
+                $sortStart = (int) ($listing->images()->max('sort_order') ?? -1) + 1;
+
+                foreach ($storedPaths as $index => $path) {
+                    $listing->images()->create([
+                        'path' => $path,
+                        'disk' => 'public',
+                        'sort_order' => $sortStart + $index,
+                        'is_primary' => ! $hasPrimary && $index === 0,
+                    ]);
+                }
+            });
+        } catch (\Throwable $exception) {
+            foreach ($storedPaths as $path) {
+                try {
+                    $deleted = Storage::disk('public')->delete($path);
+                    if (! $deleted) {
+                        Log::warning('Listing image cleanup failed after upload error.', [
+                            'listing_id' => $listing->id,
+                            'path' => $path,
+                        ]);
+                    }
+                } catch (\Throwable $cleanupException) {
+                    Log::warning('Listing image cleanup failed after upload error.', [
+                        'listing_id' => $listing->id,
+                        'path' => $path,
+                    ]);
+                }
+            }
+
+            if ($exception instanceof ValidationException) {
+                throw $exception;
+            }
+
+            Log::error('Listing image upload failed.', [
+                'listing_id' => $listing->id,
+                'exception' => $exception::class,
+            ]);
+
+            throw $exception;
+        }
+
+        $listing->refresh();
+        $listing->load([
+            'category:id,name,slug',
+            'user:id,name',
+            'images' => fn ($query) => $query
+                ->orderByDesc('is_primary')
+                ->orderBy('sort_order'),
+        ]);
+
+        return (new ListingDetailResource($listing))->response()->setStatusCode(201);
+    }
+
+    public function destroyImage(Request $request, Listing $listing, ListingImage $image): \Illuminate\Http\Response
+    {
+        $this->authorizeListing($request, 'manageImages', $listing);
+
+        if ($image->listing_id !== $listing->id) {
+            abort(404);
+        }
+
+        $path = $image->path;
+
+        DB::transaction(function () use ($listing, $image): void {
+            if ($image->is_primary) {
+                $nextPrimary = ListingImage::query()
+                    ->where('listing_id', $listing->id)
+                    ->where('id', '!=', $image->id)
+                    ->orderBy('sort_order')
+                    ->orderBy('id')
+                    ->first();
+
+                if ($nextPrimary !== null) {
+                    $nextPrimary->update(['is_primary' => true]);
+                }
+            }
+
+            $image->delete();
+        });
+
+        try {
+            if (! Storage::disk('public')->delete($path)) {
+                Log::warning('Listing image physical deletion failed.', [
+                    'listing_id' => $listing->id,
+                    'image_id' => $image->id,
+                    'path' => $path,
+                ]);
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('Listing image physical deletion failed.', [
+                'listing_id' => $listing->id,
+                'image_id' => $image->id,
+                'path' => $path,
+            ]);
+        }
 
         return response()->noContent();
+    }
+
+    public function setPrimaryImage(Request $request, Listing $listing, ListingImage $image): ListingDetailResource
+    {
+        $this->authorizeListing($request, 'manageImages', $listing);
+
+        if ($image->listing_id !== $listing->id) {
+            abort(404);
+        }
+
+        DB::transaction(function () use ($listing, $image): void {
+            ListingImage::where('listing_id', $listing->id)->update(['is_primary' => false]);
+            ListingImage::where('id', $image->id)
+                ->where('listing_id', $listing->id)
+                ->update(['is_primary' => true]);
+        });
+
+        $listing->refresh();
+        $listing->load([
+            'category:id,name,slug',
+            'user:id,name',
+            'images' => fn ($query) => $query
+                ->orderByDesc('is_primary')
+                ->orderBy('sort_order'),
+        ]);
+
+        return new ListingDetailResource($listing);
+    }
+
+    public function reorderImages(ReorderListingImagesRequest $request, Listing $listing): ListingDetailResource
+    {
+        $this->authorizeListing($request, 'manageImages', $listing);
+
+        $imageIds = $request->validated('image_ids');
+
+        DB::transaction(function () use ($listing, $imageIds): void {
+            $currentIds = $listing->images()->pluck('id')->sort()->values()->all();
+            $submittedIds = collect($imageIds)->sort()->values()->all();
+
+            if ($currentIds !== $submittedIds) {
+                abort(422);
+            }
+
+            foreach ($imageIds as $index => $imageId) {
+                ListingImage::where('id', $imageId)
+                    ->where('listing_id', $listing->id)
+                    ->update(['sort_order' => $index]);
+            }
+        });
+
+        $listing->refresh();
+        $listing->load([
+            'category:id,name,slug',
+            'user:id,name',
+            'images' => fn ($query) => $query
+                ->orderByDesc('is_primary')
+                ->orderBy('sort_order'),
+        ]);
+
+        return new ListingDetailResource($listing);
     }
 
     private function perPage(Request $request): int

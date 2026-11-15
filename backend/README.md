@@ -88,6 +88,21 @@ Authenticated seller endpoints (require `auth:sanctum` cookie session):
 
 Protected fields (`user_id`, `status`, `published_at`, `currency`, `province`) cannot be changed by clients.
 
+## Listing Image Management API
+
+Authenticated seller endpoints (require `auth:sanctum` cookie session):
+
+- `POST /api/v1/seller/listings/{listing}/images` — upload one or more images using multipart/form-data and field `images[]`.
+- `DELETE /api/v1/seller/listings/{listing}/images/{image}` — delete an owned listing image and its file.
+- `POST /api/v1/seller/listings/{listing}/images/{image}/primary` — set an owned image as the primary image.
+- `PATCH /api/v1/seller/listings/{listing}/images/reorder` — reorder owned listing images using `image_ids`.
+
+Allowed image formats: JPEG, JPG, PNG, WebP. Maximum file size: 5 MB. Maximum 8 images per listing.
+
+The public storage link is required for browser-accessible image URLs:
+
+php artisan storage:link
+
 ## Listing Lifecycle API
 
 Authenticated seller endpoints (require `auth:sanctum` cookie session):
