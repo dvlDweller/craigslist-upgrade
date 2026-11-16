@@ -20,13 +20,22 @@ export async function apiFetch<T>(
   const baseUrl = API_BASE_URL.replace(/\/$/, "");
   const cleanPath = path.replace(/^\//, "");
 
-  const response = await fetch(`${baseUrl}/${cleanPath}`, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      ...init?.headers,
-    },
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${baseUrl}/${cleanPath}`, {
+      ...init,
+      headers: {
+        Accept: "application/json",
+        ...init?.headers,
+      },
+    });
+  } catch {
+    throw new ApiError(
+      "Unable to connect to the marketplace API. Please try again later.",
+      0,
+    );
+  }
 
   const payload: unknown = await response.json().catch(() => null);
 
@@ -37,7 +46,8 @@ export async function apiFetch<T>(
     } | null;
 
     throw new ApiError(
-      errorPayload?.message ?? "Something went wrong while contacting the server.",
+      errorPayload?.message ??
+        "Something went wrong while contacting the server.",
       response.status,
       errorPayload?.errors,
     );

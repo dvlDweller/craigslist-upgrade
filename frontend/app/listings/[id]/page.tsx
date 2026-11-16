@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import MainContainer from "@/components/layout/main-container";
@@ -33,6 +34,30 @@ export default async function ListingDetailPage({
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       notFound();
+    }
+
+    if (error instanceof ApiError && error.status === 0) {
+      return (
+        <MainContainer>
+          <div className="mx-auto max-w-xl py-20 text-center">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Listing temporarily unavailable
+            </h1>
+
+            <p className="mt-4 text-gray-600">
+              We cannot connect to the marketplace server right now.
+              Please try again later.
+            </p>
+
+            <Link
+              href="/listings"
+              className="mt-8 inline-block rounded-lg bg-orange-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-700"
+            >
+              Back to Listings
+            </Link>
+          </div>
+        </MainContainer>
+      );
     }
 
     throw error;
