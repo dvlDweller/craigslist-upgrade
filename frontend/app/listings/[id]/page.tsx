@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import MainContainer from "@/components/layout/main-container";
@@ -39,11 +38,7 @@ export default async function ListingDetailPage({
     throw error;
   }
 
-  const location = [
-    listing.barangay,
-    listing.municipality,
-    listing.province,
-  ]
+  const location = [listing.barangay, listing.municipality, listing.province]
     .filter(Boolean)
     .join(", ");
 
@@ -60,10 +55,7 @@ export default async function ListingDetailPage({
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
         <section>
-          <ListingGallery
-            images={listing.images}
-            title={listing.title}
-          />
+          <ListingGallery images={listing.images} title={listing.title} />
         </section>
 
         <section className="space-y-6">
@@ -81,16 +73,12 @@ export default async function ListingDetailPage({
             </p>
 
             {location && (
-              <p className="mt-3 text-sm text-gray-500">
-                📍 {location}
-              </p>
+              <p className="mt-3 text-sm text-gray-500">📍 {location}</p>
             )}
           </div>
 
           <div className="border-t border-gray-200 pt-6">
-            <h2 className="text-lg font-bold text-gray-900">
-              Description
-            </h2>
+            <h2 className="text-lg font-bold text-gray-900">Description</h2>
 
             <p className="mt-3 whitespace-pre-wrap leading-7 text-gray-600">
               {listing.description || "No description provided."}
@@ -102,15 +90,11 @@ export default async function ListingDetailPage({
               Seller information
             </h2>
 
-            <p className="mt-3 text-gray-700">
-              {listing.user.name}
-            </p>
+            <p className="mt-3 text-gray-700">{listing.user.name}</p>
           </div>
 
           <div className="border-t border-gray-200 pt-6">
-            <p className="text-xs text-gray-400">
-              Listing ID: {listing.id}
-            </p>
+            <p className="text-xs text-gray-400">Listing ID: {listing.id}</p>
 
             <p className="mt-1 text-xs text-gray-400">
               Posted:{" "}
