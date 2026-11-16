@@ -4,6 +4,7 @@ import type { PriceType } from "@/lib/api/types";
 interface ListingFiltersProps {
   q?: string;
   category?: string;
+  municipality?: string;
   min_price?: string;
   max_price?: string;
   price_type?: PriceType;
@@ -13,6 +14,7 @@ interface ListingFiltersProps {
 export default function ListingFilters({
   q = "",
   category = "",
+  municipality = "",
   min_price = "",
   max_price = "",
   price_type,
@@ -42,6 +44,23 @@ export default function ListingFilters({
           defaultValue={q}
           placeholder="What are you looking for?"
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="municipality"
+          className="mb-1 block text-sm font-medium text-gray-700"
+        >
+          Municipality
+        </label>
+        <input
+          id="municipality"
+          type="text"
+          name="municipality[]"
+          defaultValue={municipality}
+          placeholder="Enter municipality"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-500"
         />
       </div>
 

@@ -121,6 +121,7 @@ export default async function ListingsPage({
           <ListingFilters
             q={q}
             category={category}
+            municipality={municipality[0] ?? ""}
             min_price={minPrice}
             max_price={maxPrice}
             price_type={validPriceType}
