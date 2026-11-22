@@ -801,4 +801,100 @@ class SellerListingApiTest extends TestCase
             ->assertJsonPath('data.municipality', 'Pili')
             ->assertJsonPath('data.barangay', 'Cadlan');
     }
+
+    public function test_update_municipality_only_rejects_incompatible_existing_barangay(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category);
+        $this->login($user);
+
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+            'municipality' => 'Pili',
+        ], $this->statefulHeaders())->assertUnprocessable();
+
+        $this->assertDatabaseHas('listings', [
+            'id' => $listing->id,
+            'municipality' => 'Naga City',
+            'barangay' => 'Concepcion Grande',
+        ]);
+    }
+
+    public function test_update_municipality_with_compatible_barangay_accepted(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category);
+        $this->login($user);
+
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+            'municipality' => 'Pili',
+            'barangay' => 'Cadlan',
+        ], $this->statefulHeaders())->assertOk()
+            ->assertJsonPath('data.municipality', 'Pili')
+            ->assertJsonPath('data.barangay', 'Cadlan');
+    }
+
+    public function test_update_barangay_only_validates_against_existing_municipality(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category);
+        $this->login($user);
+
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+            'barangay' => 'Cadlan',
+        ], $this->statefulHeaders())->assertUnprocessable();
+
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+            'barangay' => 'Concepcion Pequeña',
+        ], $this->statefulHeaders())->assertOk()
+            ->assertJsonPath('data.barangay', 'Concepcion Pequeña');
+    }
+
+    public function test_update_can_clear_barangay(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category);
+        $this->login($user);
+
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+            'barangay' => null,
+        ], $this->statefulHeaders())->assertOk()
+            ->assertJsonPath('data.barangay', null);
+    }
+
+    public function test_update_title_only_works_for_legacy_out_of_allowlist_location(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, [
+            'municipality' => 'Iriga City',
+            'barangay' => 'Old Barangay',
+        ]);
+        $this->login($user);
+
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+            'title' => 'Renamed Legacy Listing',
+        ], $this->statefulHeaders())->assertOk()
+            ->assertJsonPath('data.title', 'Renamed Legacy Listing');
+    }
+
+    public function test_draft_can_clear_municipality_and_barangay(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, ['status' => Listing::STATUS_DRAFT]);
+        $listing->status = Listing::STATUS_DRAFT;
+        $listing->save();
+        $this->login($user);
+
+        $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
+            'municipality' => null,
+            'barangay' => null,
+        ], $this->statefulHeaders())->assertOk()
+            ->assertJsonPath('data.municipality', null)
+            ->assertJsonPath('data.barangay', null);
+    }
 }

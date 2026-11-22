@@ -445,6 +445,7 @@ class SellerListingLifecycleApiTest extends TestCase
 
         $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
             'municipality' => 'Pili',
+            'barangay' => 'Cadlan',
         ], $this->statefulHeaders())->assertOk()
             ->assertJsonPath('data.municipality', 'Pili');
     }
@@ -483,6 +484,7 @@ class SellerListingLifecycleApiTest extends TestCase
 
         $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
             'municipality' => 'Pili',
+            'barangay' => 'Cadlan',
         ], $this->statefulHeaders())->assertStatus(409);
     }
 

@@ -78,7 +78,9 @@ class UpdateListingRequest extends FormRequest
                 }
             }
 
-            if ($this->has('barangay')) {
+            $locationSubmitted = $this->has('municipality') || $this->has('barangay');
+
+            if ($locationSubmitted && $effectiveBarangay !== null && $effectiveBarangay !== '') {
                 if ($effectiveMunicipality === null || $effectiveMunicipality === '' || ! $locationService->isValidBarangay($effectiveMunicipality, $effectiveBarangay)) {
                     $validator->errors()->add('barangay', 'The selected barangay is not allowed.');
                 }

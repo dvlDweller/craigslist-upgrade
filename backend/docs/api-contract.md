@@ -356,7 +356,7 @@ Local debug mode may include additional diagnostic information. Production must 
   "price": "100.00",
   "currency": "PHP",
   "municipality": "Naga City",
-  "barangay": "Concepcion",
+  "barangay": "Concepcion Grande",
   "province": "Camarines Sur",
   "status": "active",
   "published_at": "...",
@@ -494,13 +494,13 @@ Rules:
 
 ## Remaining risks or unresolved questions
 
-1. The exact municipality allow-list for publishing is not defined. Publishing currently requires a non-empty municipality.
+1. Publishing requires an approved municipality from the seven-LGU, 173-barangay Phase 1 allow-list; a supplied barangay must belong to that municipality.
 2. Sold listings remain editable and image-manageable by design.
 3. Soft-deleted listings retain image database records and physical files. The current implementation does not provide restore or hard-delete endpoints.
 4. Hard-delete file cleanup is deferred because no hard-delete workflow exists.
 5. Concurrency safeguards are best-effort without migrations. SQLite serializes writes, while MySQL/PostgreSQL may allow concurrent writes; unique constraints for primary image or sort order are not currently enforced.
-6. Postman is installed but collection execution must be performed manually.
-7. Frontend authentication approach is undecided.
+6. Postman collections are manually executable; no Postman installation is assumed.
+7. Frontend authentication uses cookie-based Sanctum under `/api/v1/auth/*`; unversioned `/api/*` token endpoints are a separate instructor lab.
 8. Production domain and deployment configuration are not finalized.
 
 ## Final implementation acceptance criteria
@@ -513,6 +513,3 @@ Phase 1C.10 is acceptable when:
 - Authentication statements match middleware and Sanctum configuration.
 - Image examples match actual validation and controller behavior.
 - Production requirements are documented without invented domains or credentials.
-- No backend source code, migrations, `.env`, dependencies, or frontend files were changed.
-
-This document is a read-only handoff artifact. No implementation changes were made.

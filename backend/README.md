@@ -142,7 +142,7 @@ Rules:
 - Approved municipalities are the seven Phase 1 LGUs.
 - Naga City is the API-facing municipality label; its official name is City of Naga.
 - Draft municipality and barangay are optional.
-- Publishing requires a non-empty approved municipality.
+- Publishing requires an approved municipality.
 - Barangay is optional, but when supplied it must belong to the selected municipality.
 - Barangay names may repeat across LGUs and are validated within their municipality.
 - The endpoint does not return addresses or coordinates.
