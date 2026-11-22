@@ -65,7 +65,7 @@ class SellerListingImageApiTest extends TestCase
             'price_type' => Listing::PRICE_TYPE_FIXED,
             'price' => 100.00,
             'municipality' => 'Naga City',
-            'barangay' => 'Concepcion',
+            'barangay' => 'Concepcion Grande',
         ], $attributes));
 
         return $listing;

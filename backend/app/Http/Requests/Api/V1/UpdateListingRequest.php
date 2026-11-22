@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\V1;
 
 use App\Models\Listing;
 use App\Rules\SelectableCategory;
+use App\Rules\ValidMarketplaceLocation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 use Illuminate\Validation\Rule;
@@ -38,8 +39,8 @@ class UpdateListingRequest extends FormRequest
                 }),
                 Rule::prohibitedIf(fn () => in_array($this->input('price_type'), [Listing::PRICE_TYPE_FREE, Listing::PRICE_TYPE_CONTACT], true) && $this->filled('price')),
             ],
-            'municipality' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'barangay' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'municipality' => ['sometimes', 'nullable', 'string', 'max:100', new ValidMarketplaceLocation()],
+            'barangay' => ['sometimes', 'nullable', 'string', 'max:100', new ValidMarketplaceLocation($this->input('municipality', $this->route('listing')?->municipality))],
             'user_id' => ['missing'],
             'status' => ['missing'],
             'published_at' => ['missing'],
@@ -58,6 +59,28 @@ class UpdateListingRequest extends FormRequest
                 $submittedMunicipality = $this->input('municipality');
                 if ($submittedMunicipality === null || $submittedMunicipality === '') {
                     $validator->errors()->add('municipality', 'The municipality field cannot be empty for active listings.');
+                }
+            }
+
+            $effectiveMunicipality = $this->has('municipality')
+                ? $this->input('municipality')
+                : ($listing instanceof Listing ? $listing->municipality : null);
+
+            $effectiveBarangay = $this->has('barangay')
+                ? $this->input('barangay')
+                : ($listing instanceof Listing ? $listing->barangay : null);
+
+            $locationService = app(\App\Services\MarketplaceLocationService::class);
+
+            if ($this->has('municipality') && $effectiveMunicipality !== null && $effectiveMunicipality !== '') {
+                if (! $locationService->isValidMunicipality($effectiveMunicipality)) {
+                    $validator->errors()->add('municipality', 'The selected municipality is not allowed.');
+                }
+            }
+
+            if ($this->has('barangay')) {
+                if ($effectiveMunicipality === null || $effectiveMunicipality === '' || ! $locationService->isValidBarangay($effectiveMunicipality, $effectiveBarangay)) {
+                    $validator->errors()->add('barangay', 'The selected barangay is not allowed.');
                 }
             }
 

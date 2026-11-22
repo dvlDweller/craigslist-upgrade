@@ -28,7 +28,7 @@ class ListingApiTest extends TestCase
             'price_type' => Listing::PRICE_TYPE_FIXED,
             'price' => 100.00,
             'municipality' => 'Naga City',
-            'barangay' => 'Concepcion',
+            'barangay' => 'Concepcion Grande',
         ], $attributes));
 
         $listing->status = $status;
@@ -156,7 +156,7 @@ class ListingApiTest extends TestCase
 
     public function test_municipality_and_barangay_filtering(): void
     {
-        $this->createListing(['municipality' => 'Naga City', 'barangay' => 'Concepcion']);
+        $this->createListing(['municipality' => 'Naga City', 'barangay' => 'Concepcion Grande']);
         $this->createListing(['municipality' => 'Pili', 'barangay' => 'Cadlan']);
 
         $response = $this->getJson('/api/v1/listings?municipality[]=Naga+City');

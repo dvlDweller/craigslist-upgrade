@@ -129,3 +129,20 @@ Each listing in the paginated response includes a summary `category` object:
 ```
 
 The listing detail endpoint (`GET /api/v1/listings/{listing}`) also includes the same `category` summary object.
+
+## Location API
+
+Public endpoint:
+
+- `GET /api/v1/locations` — returns approved Camarines Sur municipalities and their barangays.
+
+Rules:
+
+- Province is server-managed as Camarines Sur.
+- Approved municipalities are the seven Phase 1 LGUs.
+- Naga City is the API-facing municipality label; its official name is City of Naga.
+- Draft municipality and barangay are optional.
+- Publishing requires a non-empty approved municipality.
+- Barangay is optional, but when supplied it must belong to the selected municipality.
+- Barangay names may repeat across LGUs and are validated within their municipality.
+- The endpoint does not return addresses or coordinates.
