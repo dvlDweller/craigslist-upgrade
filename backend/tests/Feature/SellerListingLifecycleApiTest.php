@@ -61,7 +61,7 @@ class SellerListingLifecycleApiTest extends TestCase
             'price_type' => Listing::PRICE_TYPE_FIXED,
             'price' => 100.00,
             'municipality' => 'Naga City',
-            'barangay' => 'Concepcion',
+            'barangay' => 'Concepcion Grande',
         ], $attributes));
 
         if (array_key_exists('status', $attributes)) {
@@ -227,12 +227,12 @@ class SellerListingLifecycleApiTest extends TestCase
     {
         $user = $this->createUser('seller@example.com');
         $category = $this->activeCategory();
-        $listing = $this->makeListing($user, $category, ['municipality' => 'Testville']);
+        $listing = $this->makeListing($user, $category, ['municipality' => 'Naga City']);
         $this->login($user);
 
         $this->postJson("/api/v1/seller/listings/{$listing->id}/publish", [], $this->statefulHeaders())
             ->assertOk()
-            ->assertJsonPath('data.municipality', 'Testville');
+            ->assertJsonPath('data.municipality', 'Naga City');
     }
 
     public function test_client_cannot_control_status_published_at_on_publish(): void
@@ -444,9 +444,10 @@ class SellerListingLifecycleApiTest extends TestCase
         $this->login($user);
 
         $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
-            'municipality' => 'Testville',
+            'municipality' => 'Pili',
+            'barangay' => 'Cadlan',
         ], $this->statefulHeaders())->assertOk()
-            ->assertJsonPath('data.municipality', 'Testville');
+            ->assertJsonPath('data.municipality', 'Pili');
     }
 
     public function test_simulated_stale_state_active_listing_null_municipality_returns_422(): void
@@ -482,7 +483,65 @@ class SellerListingLifecycleApiTest extends TestCase
         });
 
         $this->patchJson("/api/v1/seller/listings/{$listing->id}", [
-            'municipality' => 'Testville',
+            'municipality' => 'Pili',
+            'barangay' => 'Cadlan',
         ], $this->statefulHeaders())->assertStatus(409);
+    }
+
+    public function test_publish_requires_approved_municipality(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, ['municipality' => null]);
+        $this->login($user);
+
+        $this->postJson("/api/v1/seller/listings/{$listing->id}/publish", [], $this->statefulHeaders())
+            ->assertUnprocessable();
+    }
+
+    public function test_publish_rejects_unapproved_municipality(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, ['municipality' => 'Iriga City', 'barangay' => null]);
+        $this->login($user);
+
+        $this->postJson("/api/v1/seller/listings/{$listing->id}/publish", [], $this->statefulHeaders())
+            ->assertUnprocessable();
+    }
+
+    public function test_publish_rejects_barangay_outside_municipality(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category, ['municipality' => 'Naga City', 'barangay' => 'Cadlan']);
+        $this->login($user);
+
+        $this->postJson("/api/v1/seller/listings/{$listing->id}/publish", [], $this->statefulHeaders())
+            ->assertUnprocessable();
+    }
+
+    public function test_publish_uses_stored_approved_location(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category);
+        $this->login($user);
+
+        $this->postJson("/api/v1/seller/listings/{$listing->id}/publish", [], $this->statefulHeaders())
+            ->assertOk()
+            ->assertJsonPath('data.municipality', 'Naga City');
+    }
+
+    public function test_publish_preserves_approved_barangay(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category);
+        $this->login($user);
+
+        $this->postJson("/api/v1/seller/listings/{$listing->id}/publish", [], $this->statefulHeaders())
+            ->assertOk()
+            ->assertJsonPath('data.barangay', 'Concepcion Grande');
     }
 }

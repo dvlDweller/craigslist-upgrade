@@ -88,6 +88,21 @@ Authenticated seller endpoints (require `auth:sanctum` cookie session):
 
 Protected fields (`user_id`, `status`, `published_at`, `currency`, `province`) cannot be changed by clients.
 
+## Listing Image Management API
+
+Authenticated seller endpoints (require `auth:sanctum` cookie session):
+
+- `POST /api/v1/seller/listings/{listing}/images` — upload one or more images using multipart/form-data and field `images[]`.
+- `DELETE /api/v1/seller/listings/{listing}/images/{image}` — delete an owned listing image and its file.
+- `POST /api/v1/seller/listings/{listing}/images/{image}/primary` — set an owned image as the primary image.
+- `PATCH /api/v1/seller/listings/{listing}/images/reorder` — reorder owned listing images using `image_ids`.
+
+Allowed image formats: JPEG, JPG, PNG, WebP. Maximum file size: 5 MB. Maximum 8 images per listing.
+
+The public storage link is required for browser-accessible image URLs:
+
+php artisan storage:link
+
 ## Listing Lifecycle API
 
 Authenticated seller endpoints (require `auth:sanctum` cookie session):
@@ -114,3 +129,20 @@ Each listing in the paginated response includes a summary `category` object:
 ```
 
 The listing detail endpoint (`GET /api/v1/listings/{listing}`) also includes the same `category` summary object.
+
+## Location API
+
+Public endpoint:
+
+- `GET /api/v1/locations` — returns approved Camarines Sur municipalities and their barangays.
+
+Rules:
+
+- Province is server-managed as Camarines Sur.
+- Approved municipalities are the seven Phase 1 LGUs.
+- Naga City is the API-facing municipality label; its official name is City of Naga.
+- Draft municipality and barangay are optional.
+- Publishing requires an approved municipality.
+- Barangay is optional, but when supplied it must belong to the selected municipality.
+- Barangay names may repeat across LGUs and are validated within their municipality.
+- The endpoint does not return addresses or coordinates.

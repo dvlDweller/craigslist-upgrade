@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\V1;
 
 use App\Models\Listing;
 use App\Rules\SelectableCategory;
+use App\Rules\ValidMarketplaceLocation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -34,8 +35,8 @@ class PublishListingRequest extends FormRequest
                 'required_if:price_type,' . Listing::PRICE_TYPE_FIXED,
                 'prohibited_if:price_type,' . Listing::PRICE_TYPE_FREE . ',' . Listing::PRICE_TYPE_CONTACT,
             ],
-            'municipality' => ['sometimes', 'required', 'string', 'max:100'],
-            'barangay' => ['nullable', 'string', 'max:100'],
+            'municipality' => ['sometimes', 'required', 'string', 'max:100', new ValidMarketplaceLocation()],
+            'barangay' => ['nullable', 'string', 'max:100', new ValidMarketplaceLocation($this->route('listing')?->municipality)],
             'currency' => ['sometimes', 'required', Rule::in(['PHP'])],
             'province' => ['sometimes', 'required', Rule::in(['Camarines Sur'])],
         ];

@@ -1,25 +1,35 @@
 <?php
 
-use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Api\V1\AuthController as V1AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ListingController;
+use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\SellerListingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:registration');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user', [AuthController::class, 'profile']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+});
 
 Route::prefix('v1')->group(function (): void {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/listings', [ListingController::class, 'index']);
     Route::get('/listings/{listing}', [ListingController::class, 'show']);
+    Route::get('/locations', [LocationController::class, 'index']);
 
     Route::prefix('auth')->group(function (): void {
-        Route::post('/register', [AuthController::class, 'register'])
+        Route::post('/register', [V1AuthController::class, 'register'])
             ->middleware('throttle:registration');
-        Route::post('/login', [AuthController::class, 'login'])
+        Route::post('/login', [V1AuthController::class, 'login'])
             ->middleware('throttle:login');
-        Route::post('/logout', [AuthController::class, 'logout'])
+        Route::post('/logout', [V1AuthController::class, 'logout'])
             ->middleware('auth:sanctum');
-        Route::get('/user', [AuthController::class, 'user'])
+        Route::get('/user', [V1AuthController::class, 'user'])
             ->middleware('auth:sanctum');
     });
 });
@@ -32,8 +42,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function (): void {
     Route::delete('/seller/listings/{listing}', [SellerListingController::class, 'destroy']);
     Route::post('/seller/listings/{listing}/publish', [SellerListingController::class, 'publish']);
     Route::post('/seller/listings/{listing}/mark-sold', [SellerListingController::class, 'markSold']);
+    Route::post('/seller/listings/{listing}/images', [SellerListingController::class, 'storeImages']);
+    Route::delete('/seller/listings/{listing}/images/{image}', [SellerListingController::class, 'destroyImage']);
+    Route::post('/seller/listings/{listing}/images/{image}/primary', [SellerListingController::class, 'setPrimaryImage']);
+    Route::patch('/seller/listings/{listing}/images/reorder', [SellerListingController::class, 'reorderImages']);
 });
-
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
