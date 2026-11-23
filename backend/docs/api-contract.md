@@ -444,7 +444,7 @@ Unresolved deployment values:
 
 Recommended integration sequence:
 
-1. Configure `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1`.
+1. Configure `NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1` (the public frontend client defaults to `http://localhost:8000/api/v1`).
 2. Fetch public categories.
 3. Fetch public listings.
 4. Implement search, filters, sorting, and pagination.
@@ -455,10 +455,11 @@ Recommended integration sequence:
 9. Implement publish and mark-sold actions.
 10. Implement image upload, deletion, primary selection, and reordering.
 
-Authentication decision required:
-- Existing frontend-compatible cookie-based Sanctum auth is available under `/api/v1/auth`.
-- Token-based lab endpoints are available under `/api`.
-- Choose one approach before production integration.
+Authentication decision:
+- The Next.js application uses cookie-based Sanctum.
+- Main authentication endpoints are `/api/v1/auth/*`.
+- Bearer-token endpoints under `/api/*` are a separate instructor authentication lab.
+- The Next.js application must not use the token-lab routes.
 
 Image integration:
 - Use `primary_image_url` for cards.
@@ -505,7 +506,7 @@ Rules:
 
 ## Final implementation acceptance criteria
 
-Phase 1C.10 is acceptable when:
+PR #11 location allow-list and Sanctum token-lab implementation is acceptable when:
 - `backend/docs/api-contract.md` exists.
 - All documented routes match `routes/api.php`.
 - All documented request fields match validation classes.
