@@ -49,4 +49,18 @@ export default function SiteHeader() {
               <Link href="/seller/listings" className="text-sm font-medium text-gray-700 hover:text-orange-600">My listings</Link>
               <span className="hidden text-sm text-gray-500 sm:inline">{user.name}</span>
               <button onClick={handleLogout} className="text-sm font-medium text-gray-600 hover:text-orange-600">Sign out</button>
-           #m๙Þฺ$z{-ฎ้Üjื–6Pขย๖ฦ&Vรเขฦ–็W@ข–Cา&ึ–โื&–6R ขG—Sา&็Vึ&W" ขๆึSา&ึ–ๅ๗&–6R ขึ–ใา# ข7FWา#ใ ขFVfVวEfวVSืถึ–ๅ๗&–6Wะขฦ6V๖ฦFW#า.(+ึ–โ ข6ฦ74ๆึSา'rึgVฦย&๗VๆFVBึฦr&๗&FW"&๗&FW"ึw&’ำ3ำ2’ำ"FWBื6า๗WFฦ–ๆRึๆ๖ๆRf๖7W3ฆ&๗&FW"ึ๗&ๆvRำS ข๓เขย๖F—cเ ขฦF—cเขฦฦ&VภขFึฤf๗#า&ึื&–6R ข6ฦ74ๆึSา&ึ"ำ&ฦ๖6ฒFWBื6าf๖็BึึVF—VาFWBึw&’ำs ขเขึ–ืVา&–6Pขย๖ฦ&Vรเขฦ–็W@ข–Cา&ึื&–6R ขG—Sา&็Vึ&W" ขๆึSา&ึ…๗&–6R ขึ–ใา# ข7FWา#ใ ขFVfVวEfวVSืถึ…๗&–6Wะขฦ6V๖ฦFW#า.(+ึ ข6ฦ74ๆึSา'rึgVฦย&๗VๆFVBึฦr&๗&FW"&๗&FW"ึw&’ำ3ำ2’ำ"FWBื6า๗WFฦ–ๆRึๆ๖ๆRf๖7W3ฆ&๗&FW"ึ๗&ๆvRำS ข๓เขย๖F—cเขย๖F—cเ ขฦF—cเขฦฦ&VภขFึฤf๗#า'&–6RืG—R ข6ฦ74ๆึSา&ึ"ำ&ฦ๖6ฒFWBื6าf๖็BึึVF—VาFWBึw&’ำs ขเข&–6RG—Pขย๖ฦ&Vรเขว6VฦV7@ข–Cา'&–6RืG—R ขๆึSา'&–6U๗G—R ขFVfVวEfวVSืท&–6U๗G—R๓๒"'ะข6ฦ74ๆึSา'rึgVฦย&๗VๆFVBึฦr&๗&FW"&๗&FW"ึw&’ำ3&rืv—FRำ2’ำ"FWBื6า ขเขฦ๗F–๖โfวVSา"#ไฦย&–6RG—W3ย๖๗F–๖ใเขฦ๗F–๖โfวVSา&f—VB#ไf—VB&–6Sย๖๗F–๖ใเขฦ๗F–๖โfวVSา&g&VR#ไg&VSย๖๗F–๖ใเขฦ๗F–๖โfวVSา&6๖็F7B#ไ6๖็F7Bf๗"&–6Sย๖๗F–๖ใเขย๗6VฦV7Cเขย๖F—cเ ขฦF—cเขฦฦ&VภขFึฤf๗#า&ฦ—7F–ๆrื6๗'B ข6ฦ74ๆึSา&ึ"ำ&ฦ๖6ฒFWBื6าf๖็BึึVF—VาFWBึw&’ำs ขเข6๗'B'ขย๖ฦ&Vรเขว6VฦV7@ข–Cา&ฦ—7F–ๆrื6๗'B ขๆึSา'6๗'B ขFVfVวEfวVSืท6๗'Gะข6ฦ74ๆึSา'rึgVฦย&๗VๆFVBึฦr&๗&FW"&๗&FW"ึw&’ำ3&rืv—FRำ2’ำ"FWBื6า ขเขฦ๗F–๖โfวVSา&ๆWvW7B#ไๆWvW7Bf—'7Cย๖๗F–๖ใเขฦ๗F–๖โfวVSา'&–6U๖62#ๅ&–6Sขฦ๗rF๒–vย๖๗F–๖ใเขฦ๗F–๖โfวVSา'&–6U๖FW62#ๅ&–6Sข–vF๒ฦ๗sย๖๗F–๖ใเขย๗6VฦV7Cเขย๖F—cเ ขฦ'WGF๖เขG—Sา'7V&ึ—B ข6ฦ74ๆึSา'rึgVฦย&๗VๆFVBึฦr&rึ๗&ๆvRำcำB’ำ"ใRFWBื6าf๖็Bื6Vึ–&๖ฦBFWBืv—FRG&็6—F–๖โ๗fW#ฆ&rึ๗&ๆvRำs ขเขว’f–วFW'0ขย๖'WGF๖ใเขย๖f๗&ำเข“ฐงะ
+            </>
+          ) : checking ? (
+            <span className="text-sm text-gray-400">Checking sessionโ€ฆ</span>
+          ) : (
+            <>
+              <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-orange-600">Sign In</Link>
+              <Link href="/register" className="text-sm font-medium text-gray-600 hover:text-orange-600">Register</Link>
+              <Link href="/login?next=%2Fseller%2Flistings%2Fnew" className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700">Sell Listing</Link>
+            </>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
