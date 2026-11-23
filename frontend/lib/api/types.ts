@@ -11,6 +11,13 @@ export interface Category {
   children: Category[];
 }
 
+export interface MarketplaceLocation {
+  municipality: string;
+  official_name: string;
+  psgc_code: string | null;
+  barangays: string[];
+}
+
 export interface ListingCategory {
   id: number;
   name: string;
