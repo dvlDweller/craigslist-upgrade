@@ -60,6 +60,18 @@ export default async function ListingDetailPage({
       );
     }
 
+    if (error instanceof ApiError) {
+      return (
+        <MainContainer>
+          <div role="alert" className="mx-auto max-w-xl py-20 text-center">
+            <h1 className="text-2xl font-bold text-gray-900">Unable to load this listing</h1>
+            <p className="mt-4 text-gray-600">The marketplace could not return this listing. Please try again later.</p>
+            <Link href="/listings" className="mt-8 inline-block rounded-lg bg-orange-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-700">Back to Listings</Link>
+          </div>
+        </MainContainer>
+      );
+    }
+
     throw error;
   }
 

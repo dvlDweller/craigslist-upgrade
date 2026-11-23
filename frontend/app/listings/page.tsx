@@ -60,6 +60,7 @@ export default async function ListingsPage({
   let listingsData: PaginatedResponse<Listing> | null = null;
   let categories: Category[] = [];
   let listingsError = false;
+  let categoriesError = false;
 
   try {
     listingsData = await getListings({
@@ -81,6 +82,7 @@ export default async function ListingsPage({
   try {
     categories = await getCategories();
   } catch {
+    categoriesError = true;
     categories = [];
   }
 
@@ -112,11 +114,13 @@ export default async function ListingsPage({
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
         <aside className="space-y-6 lg:col-span-1">
-          <CategoryBrowser
+          {categoriesError ? (
+            <p role="status" className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">Categories are temporarily unavailable.</p>
+          ) : <CategoryBrowser
             categories={categories}
             selectedCategory={category}
             queryString={currentQueryString}
-          />
+          />}
 
           <ListingFilters
             q={q}

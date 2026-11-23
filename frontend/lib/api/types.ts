@@ -38,11 +38,21 @@ export interface ListingImage {
   is_primary: boolean;
 }
 
-export interface ListingDetail extends Listing {
+export interface ListingDetail {
+  id: number;
+  title: string;
   description: string;
+  price_type: PriceType;
+  price: string | null;
+  currency: string;
+  municipality: string | null;
   barangay: string | null;
+  province: string | null;
+  status: string;
   published_at: string | null;
+  created_at: string;
   updated_at: string;
+  category: ListingCategory;
   user: {
     id: number;
     name: string;

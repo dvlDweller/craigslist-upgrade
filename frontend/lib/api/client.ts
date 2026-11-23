@@ -1,6 +1,10 @@
 
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
+export function getApiOrigin(): string {
+  return new URL(API_BASE_URL).origin;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -25,6 +29,8 @@ export async function apiFetch<T>(
   try {
     response = await fetch(`${baseUrl}/${cleanPath}`, {
       ...init,
+      signal: init?.signal ?? AbortSignal.timeout(10_000),
+      credentials: init?.credentials,
       headers: {
         Accept: "application/json",
         ...init?.headers,
