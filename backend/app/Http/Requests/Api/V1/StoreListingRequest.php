@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\V1;
 
 use App\Models\Listing;
 use App\Rules\SelectableCategory;
+use App\Rules\ValidMarketplaceLocation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -33,8 +34,8 @@ class StoreListingRequest extends FormRequest
                 Rule::requiredIf(fn () => $this->input('price_type') === Listing::PRICE_TYPE_FIXED),
                 Rule::prohibitedIf(fn () => in_array($this->input('price_type'), [Listing::PRICE_TYPE_FREE, Listing::PRICE_TYPE_CONTACT], true) && $this->filled('price')),
             ],
-            'municipality' => ['nullable', 'string', 'max:100'],
-            'barangay' => ['nullable', 'string', 'max:100'],
+            'municipality' => ['nullable', 'string', 'max:100', new ValidMarketplaceLocation()],
+            'barangay' => ['nullable', 'string', 'max:100', new ValidMarketplaceLocation($this->input('municipality'))],
             'user_id' => ['missing'],
             'status' => ['missing'],
             'published_at' => ['missing'],
