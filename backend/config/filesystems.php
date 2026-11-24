@@ -15,6 +15,8 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
+    'listing_images_disk' => env('LISTING_IMAGES_DISK', 'public'),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks

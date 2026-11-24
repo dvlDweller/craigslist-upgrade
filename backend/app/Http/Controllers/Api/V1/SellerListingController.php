@@ -245,18 +245,19 @@ class SellerListingController extends Controller
         $this->authorizeListing($request, 'manageImages', $listing);
 
         $files = $request->file('images', []);
+        $disk = config('filesystems.listing_images_disk', 'public');
         $storedPaths = [];
 
         try {
             foreach ($files as $file) {
-                $path = $file->store("listings/{$listing->id}", 'public');
+                $path = $file->store("listings/{$listing->id}", $disk);
                 if (! is_string($path) || $path === '') {
                     throw new \RuntimeException('Unable to store image.');
                 }
                 $storedPaths[] = $path;
             }
 
-            DB::transaction(function () use ($listing, $storedPaths): void {
+            DB::transaction(function () use ($listing, $storedPaths, $disk): void {
                 $existingCount = $listing->images()->count();
                 if ($existingCount + count($storedPaths) > 8) {
                     throw ValidationException::withMessages([
@@ -270,7 +271,7 @@ class SellerListingController extends Controller
                 foreach ($storedPaths as $index => $path) {
                     $listing->images()->create([
                         'path' => $path,
-                        'disk' => 'public',
+                        'disk' => $disk,
                         'sort_order' => $sortStart + $index,
                         'is_primary' => ! $hasPrimary && $index === 0,
                     ]);
@@ -279,7 +280,7 @@ class SellerListingController extends Controller
         } catch (\Throwable $exception) {
             foreach ($storedPaths as $path) {
                 try {
-                    $deleted = Storage::disk('public')->delete($path);
+                    $deleted = Storage::disk($disk)->delete($path);
                     if (! $deleted) {
                         Log::warning('Listing image cleanup failed after upload error.', [
                             'listing_id' => $listing->id,
@@ -346,7 +347,9 @@ class SellerListingController extends Controller
         });
 
         try {
-            if (! Storage::disk('public')->delete($path)) {
+            $disk = $image->disk ?: config('filesystems.listing_images_disk', 'public');
+
+            if (! Storage::disk($disk)->delete($path)) {
                 Log::warning('Listing image physical deletion failed.', [
                     'listing_id' => $listing->id,
                     'image_id' => $image->id,

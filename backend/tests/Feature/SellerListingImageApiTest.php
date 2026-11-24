@@ -172,6 +172,7 @@ class SellerListingImageApiTest extends TestCase
         $this->assertDatabaseHas('listing_images', ['listing_id' => $listing->id]);
         $image = $listing->images()->first();
         $this->assertTrue($image->is_primary);
+        $this->assertSame('public', $image->disk);
         Storage::disk('public')->assertExists($image->path);
     }
 
@@ -636,6 +637,116 @@ class SellerListingImageApiTest extends TestCase
         $this->assertGreaterThanOrEqual(500, $response->getStatusCode());
         $this->assertSame(7, $listing->fresh()->images()->count());
         $this->assertSame([], Storage::disk('public')->allFiles());
+    }
+
+    public function test_upload_uses_configured_s3_disk(): void
+    {
+        Storage::fake('s3');
+        config(['filesystems.listing_images_disk' => 's3']);
+
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category);
+        $this->login($user);
+
+        $file = UploadedFile::fake()->create('photo.jpg', 10, 'image/jpeg');
+
+        $response = $this->post("/api/v1/seller/listings/{$listing->id}/images", [
+            'images' => [$file],
+        ], $this->statefulHeaders());
+
+        $response->assertCreated();
+        $image = $listing->images()->first();
+        $this->assertSame('s3', $image->disk);
+        Storage::disk('s3')->assertExists($image->path);
+        $this->assertSame(Storage::disk('s3')->url($image->path), $response->json('data.images.0.url'));
+    }
+
+    public function test_delete_uses_recorded_disk_not_current_configured_disk(): void
+    {
+        Storage::fake('public');
+        Storage::fake('s3');
+        config(['filesystems.listing_images_disk' => 's3']);
+
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category);
+        $image = $listing->images()->create([
+            'path' => 'listings/recorded.jpg',
+            'disk' => 'public',
+            'is_primary' => true,
+            'sort_order' => 0,
+        ]);
+        Storage::disk('public')->put($image->path, 'x');
+        $this->login($user);
+
+        $this->deleteJson("/api/v1/seller/listings/{$listing->id}/images/{$image->id}", [], $this->statefulHeaders())
+            ->assertNoContent();
+
+        Storage::disk('public')->assertMissing($image->path);
+        $this->assertSame([], Storage::disk('s3')->allFiles());
+    }
+
+    public function test_failed_upload_cleanup_uses_configured_disk(): void
+    {
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category);
+        $this->login($user);
+
+        $file1 = UploadedFile::fake()->create('a.jpg', 10, 'image/jpeg');
+        $file2 = UploadedFile::fake()->create('b.jpg', 10, 'image/jpeg');
+
+        $firstPath = 'listings/' . $listing->id . '/a.jpg';
+
+        $diskMock = Mockery::mock(\Illuminate\Contracts\Filesystem\Filesystem::class);
+        $diskMock->shouldReceive('putFileAs')->once()->andReturn($firstPath);
+        $diskMock->shouldReceive('putFileAs')->once()->andThrow(new \RuntimeException('storage failure'));
+        $diskMock->shouldReceive('delete')->with($firstPath)->once()->andReturn(false);
+
+        Storage::shouldReceive('disk')->with('s3')->andReturn($diskMock);
+        config(['filesystems.listing_images_disk' => 's3']);
+
+        \Illuminate\Support\Facades\Log::spy();
+
+        $response = $this->post("/api/v1/seller/listings/{$listing->id}/images", [
+            'images' => [$file1, $file2],
+        ], $this->statefulHeaders());
+
+        $this->assertGreaterThanOrEqual(500, $response->getStatusCode());
+        $this->assertSame(0, $listing->images()->count());
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('warning')->once();
+    }
+
+    public function test_multi_disk_image_urls_use_recorded_disk(): void
+    {
+        Storage::fake('public');
+        Storage::fake('s3');
+
+        $user = $this->createUser('seller@example.com');
+        $category = $this->activeCategory();
+        $listing = $this->makeListing($user, $category);
+        $publicImage = $listing->images()->create([
+            'path' => 'listings/public.jpg',
+            'disk' => 'public',
+            'is_primary' => true,
+            'sort_order' => 0,
+        ]);
+        $s3Image = $listing->images()->create([
+            'path' => 'listings/s3.jpg',
+            'disk' => 's3',
+            'is_primary' => false,
+            'sort_order' => 1,
+        ]);
+        Storage::disk('public')->put($publicImage->path, 'x');
+        Storage::disk('s3')->put($s3Image->path, 'x');
+        $this->login($user);
+
+        $response = $this->getJson("/api/v1/seller/listings/{$listing->id}", $this->statefulHeaders())->assertOk();
+
+        $urls = collect($response->json('data.images'))->pluck('url', 'id');
+        $this->assertSame(Storage::disk('public')->url($publicImage->path), $urls[$publicImage->id]);
+        $this->assertSame(Storage::disk('s3')->url($s3Image->path), $urls[$s3Image->id]);
     }
 
     public function test_physical_deletion_failure_still_204(): void
