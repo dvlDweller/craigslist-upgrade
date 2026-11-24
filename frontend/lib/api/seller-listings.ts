@@ -48,3 +48,56 @@ export async function publishSellerListing(id: string): Promise<ListingDetail> {
   });
   return response.data;
 }
+
+export async function uploadSellerListingImages(id: string, files: File[]): Promise<ListingDetail> {
+  const csrf = await csrfRequestHeaders();
+  const formData = new FormData();
+  files.forEach((file) => formData.append("images[]", file));
+  const response = await apiFetch<ApiResponse<ListingDetail>>(`seller/listings/${encodeURIComponent(id)}/images`, {
+    method: "POST",
+    credentials: "include",
+    headers: csrf,
+    body: formData,
+  });
+  return response.data;
+}
+
+export async function deleteSellerListingImage(id: string, imageId: number): Promise<void> {
+  const csrf = await csrfRequestHeaders();
+  await apiFetch<null>(`seller/listings/${encodeURIComponent(id)}/images/${imageId}`, {
+    method: "DELETE",
+    credentials: "include",
+    headers: csrf,
+  });
+}
+
+export async function setSellerListingPrimaryImage(id: string, imageId: number): Promise<ListingDetail> {
+  const csrf = await csrfRequestHeaders();
+  const response = await apiFetch<ApiResponse<ListingDetail>>(`seller/listings/${encodeURIComponent(id)}/images/${imageId}/primary`, {
+    method: "POST",
+    credentials: "include",
+    headers: csrf,
+  });
+  return response.data;
+}
+
+export async function reorderSellerListingImages(id: string, imageIds: number[]): Promise<ListingDetail> {
+  const csrf = await csrfRequestHeaders();
+  const response = await apiFetch<ApiResponse<ListingDetail>>(`seller/listings/${encodeURIComponent(id)}/images/reorder`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...csrf },
+    body: JSON.stringify({ image_ids: imageIds }),
+  });
+  return response.data;
+}
+
+export async function markSellerListingSold(id: string): Promise<ListingDetail> {
+  const csrf = await csrfRequestHeaders();
+  const response = await apiFetch<ApiResponse<ListingDetail>>(`seller/listings/${encodeURIComponent(id)}/mark-sold`, {
+    method: "POST",
+    credentials: "include",
+    headers: csrf,
+  });
+  return response.data;
+}

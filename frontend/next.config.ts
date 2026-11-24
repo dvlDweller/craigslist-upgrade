@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import { fileURLToPath } from "node:url";
+
+const frontendRoot = fileURLToPath(new URL(".", import.meta.url));
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -8,6 +11,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
+    root: frontendRoot,
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

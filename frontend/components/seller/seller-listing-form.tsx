@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import MainContainer from "@/components/layout/main-container";
+import ListingImageManager from "@/components/seller/listing-image-manager";
 import { ApiError } from "@/lib/api/client";
 import { getCategories } from "@/lib/api/categories";
 import { getLocations } from "@/lib/api/locations";
 import {
   createSellerListing,
   getSellerListing,
+  markSellerListingSold,
   publishSellerListing,
   updateSellerListing,
   type SellerListingInput,
@@ -142,6 +144,19 @@ export default function SellerListingForm({ id }: { id?: string }) {
     }
   }
 
+  async function markSold() {
+    if (!id || !listing || !window.confirm("Mark this listing as sold? It will no longer appear in public listings.")) return;
+    setBusy(true);
+    setError("");
+    try {
+      setListing(await markSellerListingSold(id));
+    } catch (cause) {
+      setError(formatError(cause, "Unable to mark this listing as sold."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading) {
     return <MainContainer><p role="status" className="py-20 text-center text-gray-500">Loading listing…</p></MainContainer>;
   }
@@ -195,12 +210,15 @@ export default function SellerListingForm({ id }: { id?: string }) {
           </div>
           {locationsLoading && <p role="status" className="text-sm text-gray-500">Loading approved locations…</p>}
           {locationsError && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Approved locations could not be loaded: {locationsError}. A draft can still be saved without a location; publishing requires an approved municipality.</p>}
+          {id && listing && <ListingImageManager listing={listing} onChange={setListing} />}
           {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           <div className="flex flex-wrap gap-3">
-            <button type="submit" disabled={busy} className="rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60">{busy ? "Saving…" : listing?.status === "active" ? "Save changes" : "Save draft"}</button>
+            <button type="submit" disabled={busy} className="rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60">{busy ? "Saving…" : listing && listing.status !== "draft" ? "Save changes" : "Save draft"}</button>
             {id && listing?.status === "draft" && <button type="button" disabled={busy} onClick={(event) => { const form = event.currentTarget.form; if (form) void publish(form); }} className="rounded-lg border border-orange-600 px-5 py-2.5 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60">{busy ? "Publishing…" : "Save and publish"}</button>}
+            {id && listing?.status === "active" && <button type="button" disabled={busy} onClick={() => void markSold()} className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60">Mark as sold</button>}
           </div>
           {listing?.status === "active" && <p className="text-sm font-medium text-green-700">Published</p>}
+          {listing?.status === "sold" && <p className="text-sm font-medium text-gray-600">Marked as sold</p>}
         </form>
       </section>
     </MainContainer>
