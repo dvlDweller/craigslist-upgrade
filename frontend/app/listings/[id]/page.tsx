@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import MainContainer from "@/components/layout/main-container";
 import ListingGallery from "@/components/listings/listing-gallery";
 import { ApiError } from "@/lib/api/client";
-import { getListingById } from "@/lib/api/listings";
+import { getServerListingById } from "@/lib/api/server";
 import type { ListingDetail } from "@/lib/api/types";
 
 interface ListingDetailPageProps {
@@ -30,7 +30,7 @@ export default async function ListingDetailPage({
   let listing: ListingDetail;
 
   try {
-    listing = await getListingById(id);
+    listing = await getServerListingById(id);
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       notFound();

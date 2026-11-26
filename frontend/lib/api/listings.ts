@@ -21,9 +21,7 @@ export interface ListingQuery {
   per_page?: number;
 }
 
-export async function getListings(
-  filters: ListingQuery = {},
-): Promise<PaginatedResponse<Listing>> {
+export function getListingsPath(filters: ListingQuery = {}): string {
   const params = new URLSearchParams();
 
   if (filters.q) params.set("q", filters.q);
@@ -51,16 +49,24 @@ export async function getListings(
 
   const query = params.toString();
 
-  return apiFetch<PaginatedResponse<Listing>>(
-    `listings${query ? `?${query}` : ""}`,
-  );
+  return `listings${query ? `?${query}` : ""}`;
+}
+
+export async function getListings(
+  filters: ListingQuery = {},
+): Promise<PaginatedResponse<Listing>> {
+  return apiFetch<PaginatedResponse<Listing>>(getListingsPath(filters));
+}
+
+export function getListingByIdPath(id: string): string {
+  return `listings/${encodeURIComponent(id)}`;
 }
 
 export async function getListingById(
   id: string,
 ): Promise<ListingDetail> {
   const response = await apiFetch<ApiResponse<ListingDetail>>(
-    `listings/${encodeURIComponent(id)}`,
+    getListingByIdPath(id),
   );
 
   return response.data;

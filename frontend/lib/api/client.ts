@@ -1,8 +1,18 @@
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const defaultApiBaseUrl =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:8000/api/v1"
+    : "/api/v1";
+
+export const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_URL || defaultApiBaseUrl
+).replace(/\/$/, "");
 
 export function getApiOrigin(): string {
+  if (API_BASE_URL.startsWith("/")) {
+    return typeof window === "undefined" ? "" : window.location.origin;
+  }
+
   return new URL(API_BASE_URL).origin;
 }
 
@@ -17,17 +27,18 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(
+export async function apiFetchWithBase<T>(
+  baseUrl: string,
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const baseUrl = API_BASE_URL.replace(/\/$/, "");
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
   const cleanPath = path.replace(/^\//, "");
 
   let response: Response;
 
   try {
-    response = await fetch(`${baseUrl}/${cleanPath}`, {
+    response = await fetch(`${normalizedBaseUrl}/${cleanPath}`, {
       ...init,
       signal: init?.signal ?? AbortSignal.timeout(10_000),
       credentials: init?.credentials,
@@ -60,4 +71,11 @@ export async function apiFetch<T>(
   }
 
   return payload as T;
+}
+
+export async function apiFetch<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  return apiFetchWithBase(API_BASE_URL, path, init);
 }

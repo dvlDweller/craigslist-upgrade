@@ -2,8 +2,7 @@
 import Link from "next/link";
 import MainContainer from "@/components/layout/main-container";
 import ListingGrid from "@/components/listings/listing-grid";
-import { getCategories } from "@/lib/api/categories";
-import { getListings } from "@/lib/api/listings";
+import { getServerCategories, getServerListings } from "@/lib/api/server";
 import type { Category, Listing } from "@/lib/api/types";
 
 export default async function Home() {
@@ -13,8 +12,8 @@ export default async function Home() {
   let listingsUnavailable = false;
 
   const [categoriesResult, listingsResult] = await Promise.allSettled([
-    getCategories(),
-    getListings({ sort: "newest", per_page: 8 }),
+    getServerCategories(),
+    getServerListings({ sort: "newest", per_page: 8 }),
   ]);
 
   if (categoriesResult.status === "fulfilled") categories = categoriesResult.value;

@@ -3,8 +3,7 @@ import CategoryBrowser from "@/components/listings/category-browser";
 import ListingFilters from "@/components/listings/listing-filters";
 import ListingGrid from "@/components/listings/listing-grid";
 import ListingPagination from "@/components/listings/listing-pagination";
-import { getCategories } from "@/lib/api/categories";
-import { getListings } from "@/lib/api/listings";
+import { getServerCategories, getServerListings } from "@/lib/api/server";
 import type {
   Category,
   Listing,
@@ -63,7 +62,7 @@ export default async function ListingsPage({
   let categoriesError = false;
 
   try {
-    listingsData = await getListings({
+    listingsData = await getServerListings({
       q,
       category,
       municipality,
@@ -80,7 +79,7 @@ export default async function ListingsPage({
   }
 
   try {
-    categories = await getCategories();
+    categories = await getServerCategories();
   } catch {
     categoriesError = true;
     categories = [];
