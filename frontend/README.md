@@ -20,6 +20,16 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Marketplace API configuration
+
+- Local development defaults to `http://localhost:8000/api/v1` when `NEXT_PUBLIC_API_URL` is not set.
+- Production defaults to the same-origin path `/api/v1`. Configure `MARKETPLACE_API_PROXY_ORIGIN` to the backend origin (for example, the Render service origin) to enable Next.js rewrites for both `/api/v1/*` and `/sanctum/*`.
+- Set `NEXT_PUBLIC_API_URL` to an absolute API base URL such as `https://backend.example.com/api/v1` only when calling public endpoints directly. Direct calls across separate Vercel and Render domains are not compatible with our current cookie-based Sanctum SPA authentication; the same-origin proxy is required for the complete authenticated marketplace workflow.
+
+For Server Components, the client uses an absolute backend URL from the server-only `MARKETPLACE_API_PROXY_ORIGIN`; this avoids passing relative paths to Node fetch. Browser requests continue to use the same-origin rewrite.
+
+For Vercel Preview with the same-origin proxy, set `NEXT_PUBLIC_API_URL=/api/v1` and `MARKETPLACE_API_PROXY_ORIGIN` to the backend origin. The origin must not include a path, query, or fragment. Cookie-based Sanctum authentication also requires the backend to trust the Preview origin and issue session/CSRF cookies that the Preview hostname can use.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
