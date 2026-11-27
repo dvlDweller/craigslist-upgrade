@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Services\ListingImageStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class ListingResource extends JsonResource
 {
@@ -23,7 +23,7 @@ class ListingResource extends JsonResource
             'province' => $this->province,
             'status' => $this->status,
             'primary_image_url' => $primaryImage
-                ? Storage::disk($primaryImage->disk)->url($primaryImage->path)
+                ? app(ListingImageStorage::class)->url($primaryImage->path, $primaryImage->disk)
                 : null,
             'created_at' => $this->created_at,
             'category' => $this->whenLoaded('category', fn () => [
