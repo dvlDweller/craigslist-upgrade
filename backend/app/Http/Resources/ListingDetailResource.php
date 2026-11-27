@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Services\ListingImageStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class ListingDetailResource extends JsonResource
 {
@@ -35,7 +35,7 @@ class ListingDetailResource extends JsonResource
             ]),
             'images' => $this->images->map(fn ($image) => [
                 'id' => $image->id,
-                'url' => Storage::disk($image->disk)->url($image->path),
+                'url' => app(ListingImageStorage::class)->url($image->path, $image->disk),
                 'sort_order' => $image->sort_order,
                 'is_primary' => $image->is_primary,
             ])->values(),

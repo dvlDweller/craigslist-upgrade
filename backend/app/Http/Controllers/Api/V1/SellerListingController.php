@@ -12,13 +12,15 @@ use App\Http\Resources\ListingDetailResource;
 use App\Http\Resources\ListingResource;
 use App\Models\Listing;
 use App\Models\ListingImage;
+use App\Services\ListingImageStorage;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class SellerListingController extends Controller
@@ -45,7 +47,7 @@ class SellerListingController extends Controller
         return ListingResource::collection($listings);
     }
 
-    public function store(StoreListingRequest $request): \Illuminate\Http\JsonResponse
+    public function store(StoreListingRequest $request): JsonResponse
     {
         $data = $request->validated();
         $data['currency'] = 'PHP';
@@ -154,7 +156,7 @@ class SellerListingController extends Controller
         return new ListingDetailResource($listing);
     }
 
-    public function destroy(Request $request, Listing $listing): \Illuminate\Http\Response
+    public function destroy(Request $request, Listing $listing): Response
     {
         $this->authorizeListing($request, 'delete', $listing);
 
@@ -240,17 +242,18 @@ class SellerListingController extends Controller
         return new ListingDetailResource($listing);
     }
 
-    public function storeImages(StoreListingImageRequest $request, Listing $listing): \Illuminate\Http\JsonResponse
+    public function storeImages(StoreListingImageRequest $request, Listing $listing): JsonResponse
     {
         $this->authorizeListing($request, 'manageImages', $listing);
 
         $files = $request->file('images', []);
-        $disk = config('filesystems.listing_images_disk', 'public');
+        $storage = app(ListingImageStorage::class);
+        $disk = $storage->disk();
         $storedPaths = [];
 
         try {
             foreach ($files as $file) {
-                $path = $file->store("listings/{$listing->id}", $disk);
+                $path = $storage->store($file, $listing->id);
                 if (! is_string($path) || $path === '') {
                     throw new \RuntimeException('Unable to store image.');
                 }
@@ -280,7 +283,7 @@ class SellerListingController extends Controller
         } catch (\Throwable $exception) {
             foreach ($storedPaths as $path) {
                 try {
-                    $deleted = Storage::disk($disk)->delete($path);
+                    $deleted = $storage->delete($path, $disk);
                     if (! $deleted) {
                         Log::warning('Listing image cleanup failed after upload error.', [
                             'listing_id' => $listing->id,
@@ -319,7 +322,7 @@ class SellerListingController extends Controller
         return (new ListingDetailResource($listing))->response()->setStatusCode(201);
     }
 
-    public function destroyImage(Request $request, Listing $listing, ListingImage $image): \Illuminate\Http\Response
+    public function destroyImage(Request $request, Listing $listing, ListingImage $image): Response
     {
         $this->authorizeListing($request, 'manageImages', $listing);
 
@@ -349,7 +352,7 @@ class SellerListingController extends Controller
         try {
             $disk = $image->disk ?: config('filesystems.listing_images_disk', 'public');
 
-            if (! Storage::disk($disk)->delete($path)) {
+            if (! app(ListingImageStorage::class)->delete($path, $disk)) {
                 Log::warning('Listing image physical deletion failed.', [
                     'listing_id' => $listing->id,
                     'image_id' => $image->id,
